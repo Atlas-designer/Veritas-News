@@ -93,7 +93,7 @@ export function buildClusters(articles: Article[]): ArticleCluster[] {
         articles: scoredArticles,
         articleCount: scoredArticles.length,
         avgValidity: clusterScores.trustAggregate,
-        sources: [...new Map(scoredArticles.map((a) => [a.source.domain, a.source])).values()],
+        sources: Array.from(new Map(scoredArticles.map((a) => [a.source.domain, a.source])).values()),
         freshness: clusterScores.freshness,
         velocity: clusterScores.velocity,
         sourceDiversity: clusterScores.sourceDiversity,
