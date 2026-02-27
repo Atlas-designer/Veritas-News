@@ -1,0 +1,73 @@
+// Veritas News — Database Schema
+// Using SQLite (free, local, zero-config)
+// Only stores metadata + scores, never full article content
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./veritas.db"
+}
+
+model Source {
+  id            String    @id @default(cuid())
+  name          String
+  domain        String    @unique
+  bias          String    // LEFT | LEFT_CENTER | CENTER | RIGHT_CENTER | RIGHT
+  factualRating Int       // 0-100
+  articles      Article[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Article {
+  id                 String          @id @default(cuid())
+  title              String
+  url                String          @unique
+  sourceId           String
+  source             Source          @relation(fields: [sourceId], references: [id])
+  publishedAt        DateTime
+  summary            String?
+  sentiment          Float?          // -1 to 1
+  validityScore      Float?          // 0-100
+  corroborationCount Int             @default(0)
+  clusterId          String?
+  cluster            ArticleCluster? @relation(fields: [clusterId], references: [id])
+  fetchedAt          DateTime        @default(now())
+
+  @@index([publishedAt])
+  @@index([clusterId])
+  @@index([sourceId])
+}
+
+model ArticleCluster {
+  id                 String    @id @default(cuid())
+  topic              String
+  corroborationScore Float?
+  articles           Article[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model FactCheck {
+  id        String   @id @default(cuid())
+  claim     String
+  rating    String   // TRUE | MOSTLY_TRUE | MIXED | MOSTLY_FALSE | FALSE
+  source    String   // fact-checking organization name
+  url       String
+  checkedAt DateTime @default(now())
+
+  @@index([claim])
+}
+
+model UserPreference {
+  id             String   @id @default(cuid())
+  topicFilters   String?  // JSON array of topic strings
+  sourceFilters  String?  // JSON array of source IDs
+  biasPreference String?  // JSON array of accepted bias values
+  minTrustScore  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

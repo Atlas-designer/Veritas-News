@@ -1,0 +1,10 @@
+[build]
+  command   = "npm run build"
+  publish   = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Next.js App Router — Netlify's built-in Next.js runtime handles
+# API routes, server components, and ISR automatically.
+# No extra plugin install required.
