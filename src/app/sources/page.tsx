@@ -9,8 +9,10 @@ import {
   enableAll,
   disableAll,
 } from "@/lib/sources/prefs";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SourcesPage() {
+  const { syncPrefs } = useAuth();
   const [disabled, setDisabled] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -18,18 +20,22 @@ export default function SourcesPage() {
   }, []);
 
   const handleToggle = (domain: string) => {
-    setDisabled(toggleSource(domain));
+    const next = toggleSource(domain);
+    setDisabled(next);
+    syncPrefs({ disabledSources: Array.from(next) });
   };
 
   const handleEnableAll = () => {
     enableAll();
     setDisabled(new Set());
+    syncPrefs({ disabledSources: [] });
   };
 
   const handleDisableAll = () => {
     const allDomains = SOURCES.map((s) => s.domain);
     disableAll(allDomains);
     setDisabled(new Set(allDomains));
+    syncPrefs({ disabledSources: allDomains });
   };
 
   const activeCount = SOURCES.length - disabled.size;
@@ -89,7 +95,7 @@ export default function SourcesPage() {
       </div>
 
       <p className="text-[10px] text-vn-text-dim mt-4 font-mono">
-        Changes take effect on the next feed refresh. Preferences are saved locally in your browser.
+        Changes take effect on the next feed refresh. Preferences are synced to your account.
       </p>
     </div>
   );

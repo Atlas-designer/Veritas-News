@@ -5,6 +5,7 @@ import Link from "next/link";
 import HudFrame from "@/components/ui/HudFrame";
 import { clearCache } from "@/lib/api/client";
 import { getFlags, setFlag, FeatureFlags } from "@/lib/config/flags";
+import { useAuth } from "@/contexts/AuthContext";
 
 const topics = [
   "Politics", "Technology", "Climate", "Economy",
@@ -27,6 +28,7 @@ const featureFlagMeta: { key: keyof FeatureFlags; label: string; description: st
 ];
 
 export default function SettingsPage() {
+  const { syncPrefs } = useAuth();
   const [selectedTopics, setSelectedTopics] = useState<string[]>(topics);
   const [selectedBias, setSelectedBias] = useState<string[]>(biasOptions.map((b) => b.value));
   const [minTrust, setMinTrust] = useState(0);
@@ -53,7 +55,9 @@ export default function SettingsPage() {
   const toggleFlag = (key: keyof FeatureFlags) => {
     const newValue = !flags[key];
     setFlag(key, newValue);
-    setFlags((prev) => ({ ...prev, [key]: newValue }));
+    const next = { ...flags, [key]: newValue };
+    setFlags(next);
+    syncPrefs({ featureFlags: next });
   };
 
   const handleClearCache = async () => {
