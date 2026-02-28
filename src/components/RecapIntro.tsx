@@ -16,7 +16,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import type { RecapSummary } from "@/lib/recap/builder";
 
 interface Props {
-  recap: RecapSummary;
+  recap: RecapSummary | null;
   onDone: () => void;
 }
 
@@ -24,6 +24,7 @@ type Phase = 0 | 1 | 2 | 3;
 
 export default function RecapIntro({ recap, onDone }: Props) {
   const [phase, setPhase] = useState<Phase>(0);
+  const [bootDone, setBootDone] = useState(false);
   const [visibleItems, setVisibleItems] = useState(0);
   const [exiting, setExiting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,16 +39,21 @@ export default function RecapIntro({ recap, onDone }: Props) {
     timerRef.current = setTimeout(onDone, 400);
   }, [onDone]);
 
-  // Phase 0 → 1: boot screen
+  // Phase 0: run 1.4s boot timer
   useEffect(() => {
     if (phase !== 0) return;
-    timerRef.current = setTimeout(() => setPhase(1), 1400);
+    timerRef.current = setTimeout(() => setBootDone(true), 1400);
     return clearTimer;
   }, [phase]);
 
+  // Advance to phase 1 only when boot is done AND recap data has arrived
+  useEffect(() => {
+    if (phase === 0 && bootDone && recap) setPhase(1);
+  }, [phase, bootDone, recap]);
+
   // Phase 1: reveal story cards one by one
   useEffect(() => {
-    if (phase !== 1) return;
+    if (phase !== 1 || !recap) return;
 
     const showNext = (idx: number) => {
       setVisibleItems(idx + 1);
@@ -61,7 +67,7 @@ export default function RecapIntro({ recap, onDone }: Props) {
 
     timerRef.current = setTimeout(() => showNext(0), 200);
     return clearTimer;
-  }, [phase, recap.items.length]);
+  }, [phase, recap]);
 
   // Phase 2 → 3
   useEffect(() => {
@@ -130,7 +136,7 @@ export default function RecapIntro({ recap, onDone }: Props) {
       )}
 
       {/* ── Phase 1: Story cards ───────────────────────────── */}
-      {phase === 1 && (
+      {phase === 1 && recap && (
         <div className="w-full max-w-sm px-4">
           <div className="data-readout text-vn-cyan text-xs text-center mb-4 tracking-widest">
             24-HOUR BRIEFING
@@ -168,7 +174,7 @@ export default function RecapIntro({ recap, onDone }: Props) {
       )}
 
       {/* ── Phase 2: Summary stats ─────────────────────────── */}
-      {phase === 2 && (
+      {phase === 2 && recap && (
         <div className="flex flex-col items-center gap-8 animate-fade-in px-6 text-center">
           <div className="data-readout text-vn-cyan text-xs tracking-widest">
             INTELLIGENCE SUMMARY

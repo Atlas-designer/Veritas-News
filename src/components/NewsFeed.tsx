@@ -73,7 +73,11 @@ export default function NewsFeed() {
   const [sortMode, setSortMode] = useState<SortMode>("top");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [recap, setRecap] = useState<RecapSummary | null>(null);
-  const [showRecap, setShowRecap] = useState(false);
+  const [showRecap, setShowRecap] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const flags = getFlags();
+    return flags.RECAP_ENABLED && !sessionStorage.getItem("vn:recap-shown");
+  });
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [activeSport, setActiveSport] = useState<Sport | null>(null);
@@ -97,7 +101,7 @@ export default function NewsFeed() {
       setClusters(built);
       setLastUpdated(new Date());
 
-      // Show recap intro once per session if feature is enabled
+      // Build recap data once loaded (overlay already shown if RECAP_ENABLED)
       const flags = getFlags();
       if (
         flags.RECAP_ENABLED &&
@@ -105,7 +109,6 @@ export default function NewsFeed() {
         !sessionStorage.getItem("vn:recap-shown")
       ) {
         setRecap(buildRecap(built));
-        setShowRecap(true);
       }
     } finally {
       setLoading(false);
@@ -160,7 +163,11 @@ export default function NewsFeed() {
       (c) =>
         !q ||
         c.topic.toLowerCase().includes(q) ||
-        c.articles.some((a) => a.title.toLowerCase().includes(q)) ||
+        c.articles.some(
+          (a) =>
+            a.title.toLowerCase().includes(q) ||
+            a.summary?.toLowerCase().includes(q)
+        ) ||
         c.sources.some((s) => s.name.toLowerCase().includes(q))
     );
 
@@ -173,8 +180,8 @@ export default function NewsFeed() {
 
   return (
     <div className="animate-fade-in">
-      {/* Recap intro — full-screen overlay, shown once per session */}
-      {showRecap && recap && (
+      {/* Recap intro — full-screen overlay, shown immediately, waits for data */}
+      {showRecap && (
         <RecapIntro recap={recap} onDone={handleRecapDone} />
       )}
 
@@ -200,7 +207,7 @@ export default function NewsFeed() {
           VERITAS
         </h1>
         <p className="text-vn-text-dim text-sm mt-1">
-          Intelligence-grade news verification
+          All your news in one place
         </p>
       </header>
 
