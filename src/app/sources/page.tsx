@@ -8,15 +8,20 @@ import {
   toggleSource,
   enableAll,
   disableAll,
+  getCustomTrustScores,
+  setCustomTrustScore,
+  resetCustomTrustScore,
 } from "@/lib/sources/prefs";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function SourcesPage() {
   const { syncPrefs } = useAuth();
   const [disabled, setDisabled] = useState<Set<string>>(new Set());
+  const [customTrust, setCustomTrust] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setDisabled(getDisabledSources());
+    setCustomTrust(getCustomTrustScores());
   }, []);
 
   const handleToggle = (domain: string) => {
@@ -36,6 +41,16 @@ export default function SourcesPage() {
     disableAll(allDomains);
     setDisabled(new Set(allDomains));
     syncPrefs({ disabledSources: allDomains });
+  };
+
+  const handleTrustChange = (domain: string, score: number | null) => {
+    if (score === null) {
+      resetCustomTrustScore(domain);
+      setCustomTrust((prev) => { const next = { ...prev }; delete next[domain]; return next; });
+    } else {
+      setCustomTrustScore(domain, score);
+      setCustomTrust((prev) => ({ ...prev, [domain]: score }));
+    }
   };
 
   const activeCount = SOURCES.length - disabled.size;
@@ -90,6 +105,9 @@ export default function SourcesPage() {
             enabled={!disabled.has(source.domain)}
             onToggle={() => handleToggle(source.domain)}
             last={i === SOURCES.length - 1}
+            effectiveTrust={customTrust[source.domain] ?? source.factualRating}
+            isCustomTrust={source.domain in customTrust}
+            onTrustChange={(score) => handleTrustChange(source.domain, score)}
           />
         ))}
       </div>
@@ -108,13 +126,36 @@ function SourceRow({
   enabled,
   onToggle,
   last,
+  effectiveTrust,
+  isCustomTrust,
+  onTrustChange,
 }: {
   source: SourceDef;
   enabled: boolean;
   onToggle: () => void;
   last: boolean;
+  effectiveTrust: number;
+  isCustomTrust: boolean;
+  onTrustChange: (score: number | null) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   const biasColor = BIAS_COLORS[source.bias];
+
+  const trustColor =
+    effectiveTrust >= 85
+      ? "text-vn-green"
+      : effectiveTrust >= 70
+        ? "text-vn-cyan"
+        : effectiveTrust >= 55
+          ? "text-vn-orange"
+          : "text-vn-red";
+
+  const commitEdit = () => {
+    const val = parseInt(draft, 10);
+    if (!isNaN(val)) onTrustChange(Math.max(0, Math.min(100, val)));
+    setEditing(false);
+  };
 
   return (
     <div
@@ -129,9 +170,11 @@ function SourceRow({
           <p className="font-mono text-[13px] text-vn-text leading-tight truncate">
             {source.name}
           </p>
-          <p className="data-readout text-[9px] text-vn-text-dim/60 leading-none">
-            {source.domain}
-          </p>
+          {effectiveTrust < 20 && (
+            <p className="data-readout text-[8px] text-vn-red/70 leading-none mt-0.5">
+              LOW TRUST — REQUIRES CORROBORATION
+            </p>
+          )}
         </div>
       </div>
 
@@ -143,22 +186,46 @@ function SourceRow({
         {BIAS_LABELS[source.bias].toUpperCase()}
       </span>
 
-      {/* Trust score */}
-      <div className="flex flex-col items-center flex-shrink-0 w-10">
-        <span
-          className={`font-mono text-sm font-bold leading-none ${
-            source.factualRating >= 85
-              ? "text-vn-green"
-              : source.factualRating >= 70
-                ? "text-vn-cyan"
-                : source.factualRating >= 55
-                  ? "text-vn-orange"
-                  : "text-vn-red"
-          }`}
-        >
-          {source.factualRating}
-        </span>
-        <span className="data-readout text-[8px] text-vn-text-dim/50 leading-none">TRUST</span>
+      {/* Trust score — tap to edit */}
+      <div className="flex flex-col items-center flex-shrink-0 w-12">
+        {editing ? (
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={draft}
+            autoFocus
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitEdit();
+              if (e.key === "Escape") setEditing(false);
+            }}
+            className="w-12 bg-vn-bg border border-vn-cyan rounded-sm px-1 py-0.5 font-mono text-sm text-vn-cyan text-center focus:outline-none"
+          />
+        ) : (
+          <button
+            onClick={() => { setDraft(String(effectiveTrust)); setEditing(true); }}
+            title="Click to edit trust score"
+            className="flex flex-col items-center group"
+          >
+            <span className={`font-mono text-sm font-bold leading-none group-hover:underline ${trustColor}`}>
+              {effectiveTrust}
+            </span>
+            <span className="data-readout text-[8px] text-vn-text-dim/50 leading-none">
+              {isCustomTrust ? "CUSTOM" : "TRUST"}
+            </span>
+          </button>
+        )}
+        {isCustomTrust && !editing && (
+          <button
+            onClick={() => onTrustChange(null)}
+            title="Reset to default"
+            className="data-readout text-[7px] text-vn-text-dim/40 hover:text-vn-red leading-none mt-0.5"
+          >
+            RESET
+          </button>
+        )}
       </div>
 
       {/* Toggle */}

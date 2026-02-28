@@ -193,16 +193,6 @@ export default function SettingsPage() {
               SEE SOURCES →
             </Link>
           </div>
-          <div>
-            <label className="data-readout text-[10px] text-vn-text-dim block mb-1">
-              GOOGLE FACT CHECK KEY (OPTIONAL)
-            </label>
-            <input
-              type="password"
-              placeholder="Configured via .env.local"
-              className="w-full bg-vn-bg border border-vn-border rounded-sm px-3 py-2 text-sm text-vn-text font-mono focus:border-vn-cyan focus:outline-none transition-colors"
-            />
-          </div>
         </div>
       </HudFrame>
 

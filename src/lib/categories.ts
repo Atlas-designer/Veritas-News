@@ -9,7 +9,7 @@ export type Category =
   | "Sports"
   | "Environment"
   | "Science & Tech"
-  | "Uplifting";
+  | "Economy";
 
 export const ALL_CATEGORIES: Category[] = [
   "Politics",
@@ -17,7 +17,7 @@ export const ALL_CATEGORIES: Category[] = [
   "Sports",
   "Environment",
   "Science & Tech",
-  "Uplifting",
+  "Economy",
 ];
 
 export const CATEGORY_META: Record<
@@ -86,16 +86,17 @@ export const CATEGORY_META: Record<
       "mars", "rocket", "launch", "satellite", "dna", "crispr",
     ],
   },
-  Uplifting: {
+  Economy: {
     icon: "◎",
-    short: "UPLIFTING",
+    short: "ECONOMY",
     keywords: [
-      "rescue", "saved", "hero", "inspiring", "breakthrough", "celebrate",
-      "achievement", "donate", "volunteer", "community", "hope", "recovery",
-      "success", "award", "milestone", "innovation", "record", "first ever",
-      "breakthrough", "reunited", "survived", "charity", "kindness",
-      "generous", "wholesome", "good news", "triumph", "historic win",
-      "cure", "healed", "rebuilt", "restored", "thriving",
+      "economy", "economic", "gdp", "inflation", "interest rate", "federal reserve",
+      "stock", "market", "nasdaq", "s&p", "dow jones", "shares", "earnings",
+      "recession", "unemployment", "jobs report", "trade", "tariff", "deficit",
+      "debt", "budget", "spending", "treasury", "bank", "banking", "mortgage",
+      "housing market", "consumer", "retail", "oil price", "energy price",
+      "crypto", "bitcoin", "dollar", "currency", "imf", "world bank",
+      "supply chain", "manufacturing", "exports", "imports", "fiscal",
     ],
   },
 };

@@ -43,3 +43,35 @@ export function enableAll(): void {
 export function disableAll(domains: string[]): void {
   setDisabledSources(new Set(domains));
 }
+
+// ── Custom trust scores ───────────────────────────────────────────────────────
+
+const TRUST_KEY = "vn:custom-trust";
+
+export function getCustomTrustScores(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(TRUST_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setCustomTrustScore(domain: string, score: number): void {
+  if (typeof window === "undefined") return;
+  const scores = getCustomTrustScores();
+  scores[domain] = Math.max(0, Math.min(100, Math.round(score)));
+  localStorage.setItem(TRUST_KEY, JSON.stringify(scores));
+}
+
+export function resetCustomTrustScore(domain: string): void {
+  if (typeof window === "undefined") return;
+  const scores = getCustomTrustScores();
+  delete scores[domain];
+  if (Object.keys(scores).length === 0) {
+    localStorage.removeItem(TRUST_KEY);
+  } else {
+    localStorage.setItem(TRUST_KEY, JSON.stringify(scores));
+  }
+}

@@ -13,6 +13,7 @@ import {
   Category,
 } from "@/lib/categories";
 import { SPORTS, Sport } from "@/lib/sports/scores";
+import { getCustomTrustScores } from "@/lib/sources/prefs";
 import ClusterCard from "./ClusterCard";
 import RecapIntro from "./RecapIntro";
 import ScoresPanel from "./ScoresPanel";
@@ -144,6 +145,7 @@ export default function NewsFeed() {
       : clusters;
 
   const q = query.trim().toLowerCase();
+  const customTrust = getCustomTrustScores();
   const filtered = sorted
     .filter((c) => {
       if (!activeCategory) return true;
@@ -169,7 +171,16 @@ export default function NewsFeed() {
             a.summary?.toLowerCase().includes(q)
         ) ||
         c.sources.some((s) => s.name.toLowerCase().includes(q))
-    );
+    )
+    .filter((c) => {
+      // Gate clusters where every source has effective trust < 20 —
+      // they need corroboration from at least one trusted source to appear.
+      const allLowTrust = c.sources.every((s) => {
+        const effective = customTrust[s.domain] ?? s.factualRating;
+        return effective < 20;
+      });
+      return !allLowTrust;
+    });
 
   const handleRecapDone = useCallback(() => {
     setShowRecap(false);
