@@ -51,6 +51,13 @@ export default function RecapIntro({ recap, onDone }: Props) {
     if (phase === 0 && bootDone && recap) setPhase(1);
   }, [phase, bootDone, recap]);
 
+  // Safety valve: if data hasn't arrived within 4s of boot completing, abort intro
+  useEffect(() => {
+    if (!bootDone || recap) return;
+    const t = setTimeout(onDone, 4000);
+    return () => clearTimeout(t);
+  }, [bootDone, recap, onDone]);
+
   // Phase 1: reveal story cards one by one
   useEffect(() => {
     if (phase !== 1 || !recap) return;

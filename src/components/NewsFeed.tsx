@@ -69,6 +69,7 @@ function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
 export default function NewsFeed() {
   const [clusters, setClusters] = useState<ArticleCluster[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [usingDemo, setUsingDemo] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("top");
@@ -85,6 +86,7 @@ export default function NewsFeed() {
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await fetchArticles({ force });
 
@@ -111,6 +113,9 @@ export default function NewsFeed() {
       ) {
         setRecap(buildRecap(built));
       }
+    } catch (err) {
+      console.error("[NewsFeed] load failed:", err);
+      setError("FEED UNAVAILABLE — check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -292,6 +297,11 @@ export default function NewsFeed() {
         )}
       </div>
 
+      {/* Category transparency note */}
+      <p className="data-readout text-[8px] text-vn-text-dim/40 mb-3">
+        AUTO-CATEGORISED · KEYWORD MATCHED
+      </p>
+
       {/* Sports sub-picker — visible when Sports category is active */}
       {activeCategory === "Sports" && (
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 pl-1 border-l-2 border-vn-orange/50 ml-1 scrollbar-hide">
@@ -356,6 +366,16 @@ export default function NewsFeed() {
           {/* Feed */}
           {loading ? (
             <FeedSkeleton />
+          ) : error ? (
+            <div className="text-center py-16 space-y-4">
+              <p className="data-readout text-vn-red text-xs">{error}</p>
+              <button
+                onClick={() => load(true)}
+                className="data-readout text-[10px] px-4 py-2 rounded-sm border border-vn-cyan/50 text-vn-cyan hover:border-vn-cyan hover:bg-vn-cyan/10 transition-all"
+              >
+                ↻ RETRY
+              </button>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <p className="data-readout text-vn-text-dim">
@@ -371,6 +391,14 @@ export default function NewsFeed() {
                   className="data-readout text-[10px] text-vn-cyan hover:text-glow-cyan transition-all"
                 >
                   SHOW ALL STORIES
+                </button>
+              )}
+              {!q && !activeCategory && (
+                <button
+                  onClick={() => load(true)}
+                  className="data-readout text-[10px] px-4 py-2 rounded-sm border border-vn-border text-vn-text-dim hover:border-vn-cyan/40 transition-all"
+                >
+                  ↻ RETRY
                 </button>
               )}
             </div>

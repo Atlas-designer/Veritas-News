@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "FEED", icon: "◉" },
-  { href: "/map", label: "MAP", icon: "⊕" },
-  { href: "/settings", label: "CONFIG", icon: "⚙" },
+  { href: "/",         label: "FEED",     icon: "◉" },
+  { href: "/map",      label: "MAP",      icon: "⊕" },
+  { href: "/sources",  label: "SOURCES",  icon: "◈" },
+  { href: "/settings", label: "SETTINGS", icon: "⚙" },
 ];
 
 export default function NavBar() {
@@ -23,7 +24,7 @@ export default function NavBar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-1 px-4 py-2 transition-all ${
+                className={`flex flex-col items-center gap-1 px-2 py-2 transition-all ${
                   isActive
                     ? "text-vn-cyan text-glow-cyan"
                     : "text-vn-text-dim hover:text-vn-text"

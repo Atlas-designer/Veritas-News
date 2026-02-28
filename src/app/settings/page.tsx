@@ -6,6 +6,7 @@ import HudFrame from "@/components/ui/HudFrame";
 import { clearCache } from "@/lib/api/client";
 import { getFlags, setFlag, FeatureFlags } from "@/lib/config/flags";
 import { useAuth } from "@/contexts/AuthContext";
+import { getUsername, clearUsername } from "@/lib/auth/username";
 
 const topics = [
   "Politics", "Technology", "Climate", "Economy",
@@ -34,11 +35,23 @@ export default function SettingsPage() {
   const [minTrust, setMinTrust] = useState(0);
   const [flags, setFlags] = useState<FeatureFlags>(getFlags());
   const [cacheCleared, setCacheCleared] = useState(false);
+  const [username, setUsernameState] = useState<string | null>(null);
 
-  // Read flags from localStorage on mount
+  // Read flags + username from localStorage on mount
   useEffect(() => {
     setFlags(getFlags());
+    setUsernameState(getUsername());
   }, []);
+
+  const handleSignOut = () => {
+    clearUsername();
+    window.location.reload();
+  };
+
+  const handleReplayTour = () => {
+    localStorage.removeItem("vn:demo-shown");
+    window.location.reload();
+  };
 
   const toggleTopic = (topic: string) => {
     setSelectedTopics((prev) =>
@@ -192,6 +205,32 @@ export default function SettingsPage() {
             >
               SEE SOURCES →
             </Link>
+          </div>
+        </div>
+      </HudFrame>
+
+      {/* Session */}
+      <HudFrame title="SESSION" className="mb-4">
+        <div className="space-y-3">
+          {username && (
+            <div className="flex items-center gap-2">
+              <span className="data-readout text-[10px] text-vn-text-dim">SIGNED IN AS</span>
+              <span className="font-mono text-sm text-vn-cyan">{username}</span>
+            </div>
+          )}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleReplayTour}
+              className="data-readout text-[10px] px-3 py-2 rounded-sm border border-vn-cyan/50 text-vn-cyan hover:border-vn-cyan hover:bg-vn-cyan/10 transition-all"
+            >
+              ↺ REPLAY INTRO TOUR
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="data-readout text-[10px] px-3 py-2 rounded-sm border border-vn-red/50 text-vn-red hover:border-vn-red hover:bg-vn-red/10 transition-all"
+            >
+              SIGN OUT
+            </button>
           </div>
         </div>
       </HudFrame>
