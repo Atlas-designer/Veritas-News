@@ -25,25 +25,35 @@ type FeedItem = {
 const parser = new Parser<Record<string, unknown>, FeedItem>();
 
 // ── Feed list ─────────────────────────────────────────────────────────────────
-// 10 outlets spanning the full credibility / bias spectrum.
+// 20 outlets spanning the full credibility / bias spectrum.
 // fallbackDomain must match a key in sourceDatabase (ratings.ts).
 
 const RSS_FEEDS: Array<{ url: string; domain: string }> = [
   // CENTER — highest trust
-  { url: "https://feeds.apnews.com/rss/apf-topnews",                 domain: "apnews.com"         },
-  { url: "https://feeds.bbci.co.uk/news/rss.xml",                    domain: "bbc.co.uk"          },
+  { url: "https://feeds.apnews.com/rss/apf-topnews",                   domain: "apnews.com"                    },
+  { url: "https://feeds.reuters.com/reuters/topNews",                   domain: "reuters.com"                   },
+  { url: "https://feeds.bbci.co.uk/news/rss.xml",                      domain: "bbc.co.uk"                     },
+  { url: "https://feeds.skynews.com/feeds/rss/home.xml",               domain: "news.sky.com"                  },
+  { url: "https://rss.dw.com/xml/rss-en-all",                          domain: "dw.com"                        },
+  { url: "https://www.france24.com/en/rss",                            domain: "france24.com"                  },
   // LEFT_CENTER
-  { url: "https://feeds.npr.org/1001/rss.xml",                       domain: "npr.org"            },
-  { url: "https://www.theguardian.com/world/rss",                    domain: "theguardian.com"    },
-  { url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",domain: "nytimes.com"        },
-  { url: "http://rss.cnn.com/rss/cnn_topstories.rss",                domain: "cnn.com"            },
-  { url: "https://feeds.washingtonpost.com/rss/world",               domain: "washingtonpost.com" },
+  { url: "https://feeds.npr.org/1001/rss.xml",                         domain: "npr.org"                       },
+  { url: "https://www.theguardian.com/world/rss",                      domain: "theguardian.com"               },
+  { url: "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",  domain: "nytimes.com"                   },
+  { url: "http://rss.cnn.com/rss/cnn_topstories.rss",                  domain: "cnn.com"                       },
+  { url: "https://feeds.washingtonpost.com/rss/world",                 domain: "washingtonpost.com"            },
+  { url: "https://feeds.abcnews.com/abcnews/topstories",               domain: "abcnews.go.com"                },
+  { url: "https://www.cbsnews.com/latest/rss/main",                    domain: "cbsnews.com"                   },
   // RIGHT_CENTER
-  { url: "https://feeds.a.dj.com/rss/RSSWorldNews.xml",              domain: "wsj.com"            },
+  { url: "https://feeds.a.dj.com/rss/RSSWorldNews.xml",                domain: "wsj.com"                       },
+  { url: "https://nypost.com/feed/",                                    domain: "nypost.com"                    },
+  { url: "https://www.telegraph.co.uk/news/rss.xml",                   domain: "telegraph.co.uk"               },
   // RIGHT
-  { url: "https://moxie.foxnews.com/google-publisher/latest.xml",    domain: "foxnews.com"        },
+  { url: "https://moxie.foxnews.com/google-publisher/latest.xml",      domain: "foxnews.com"                   },
   // International
-  { url: "https://www.aljazeera.com/xml/rss/all.xml",                domain: "aljazeera.com"      },
+  { url: "https://www.aljazeera.com/xml/rss/all.xml",                  domain: "aljazeera.com"                 },
+  { url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms", domain: "timesofindia.indiatimes.com"   },
+  { url: "https://www.scmp.com/rss/2/feed",                            domain: "scmp.com"                      },
 ];
 
 const MAX_PER_FEED = 15; // articles per feed before dedup
