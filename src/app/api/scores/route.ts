@@ -20,6 +20,13 @@ const ESPN_ENDPOINTS: Record<string, string> = {
   atp:              "https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard",
 };
 
+// TheSportsDB free API — sports not on ESPN (snooker, darts)
+const SPORTSDB_LEAGUES: Record<string, string> = {
+  snooker: "4555",   // World Snooker Tour
+  darts:   "4554",   // PDC Darts
+};
+const SPORTSDB_BASE = "https://www.thesportsdb.com/api/v1/json/1";
+
 export interface ScoreEvent {
   id: string;
   name: string;       // weight class for MMA, event name for others
@@ -52,7 +59,32 @@ export async function GET(request: Request) {
   const endpoint = ESPN_ENDPOINTS[sport];
 
   if (!endpoint) {
-    return NextResponse.json({ events: [] });
+    // Fall through to TheSportsDB for sports not on ESPN
+    const leagueId = SPORTSDB_LEAGUES[sport];
+    if (!leagueId) return NextResponse.json({ events: [] });
+
+    const cacheKey2 = `${sport}:${daysBack}`;
+    const hit2 = cache.get(cacheKey2);
+    if (hit2 && Date.now() - hit2.ts < TTL) {
+      return NextResponse.json({ events: hit2.data }, { headers: { "X-Cache": "HIT" } });
+    }
+
+    try {
+      const [pastRes, nextRes] = await Promise.all([
+        fetch(`${SPORTSDB_BASE}/eventspastleague.php?id=${leagueId}`, { headers: { "User-Agent": "Veritas-News/1.0" } }),
+        daysBack === 0
+          ? fetch(`${SPORTSDB_BASE}/eventsnextleague.php?id=${leagueId}`, { headers: { "User-Agent": "Veritas-News/1.0" } })
+          : Promise.resolve(null),
+      ]);
+      const pastData = pastRes.ok ? await pastRes.json() : {};
+      const nextData = nextRes?.ok ? await nextRes.json() : {};
+      const combined = [...(nextData.events ?? []), ...(pastData.events ?? [])];
+      const events   = normalizeSportsDB(combined);
+      cache.set(cacheKey2, { data: events, ts: Date.now() });
+      return NextResponse.json({ events });
+    } catch {
+      return NextResponse.json({ events: [] });
+    }
   }
 
   // Cache key includes the date range so NOW vs LAST 7D are cached separately
@@ -110,7 +142,10 @@ export async function GET(request: Request) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeEvents(raw: any[]): ScoreEvent[] {
-  return raw.slice(0, 16).map((e) => {
+  return raw
+    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    .slice(0, 16)
+    .map((e) => {
     const comp  = e.competitions?.[0];
     const state = e.status?.type?.state ?? "pre";
     const statusText =
@@ -169,7 +204,9 @@ function normalizeEvents(raw: any[]): ScoreEvent[] {
 function normalizeMMA(rawEvents: any[]): ScoreEvent[] {
   const bouts: ScoreEvent[] = [];
 
-  for (const event of rawEvents.slice(0, 5)) {
+  for (const event of rawEvents
+    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    .slice(0, 5)) {
     const eventDate  = event.date ?? "";
     const eventState = event.status?.type?.state ?? "pre";
 
@@ -211,4 +248,43 @@ function normalizeMMA(rawEvents: any[]): ScoreEvent[] {
   }
 
   return bouts.slice(0, 30);
+}
+
+// ── TheSportsDB normaliser ─────────────────────────────────────────────────
+// Used for sports not on ESPN (snooker, darts).
+// Fields: strHomeTeam, strAwayTeam, intHomeScore, intAwayScore,
+//         dateEvent, strStatus, idEvent, strEvent.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeSportsDB(raw: any[]): ScoreEvent[] {
+  return raw
+    .filter((e) => e.strHomeTeam && e.strAwayTeam)
+    .map((e) => {
+      const hScore   = e.intHomeScore?.toString() ?? "";
+      const aScore   = e.intAwayScore?.toString() ?? "";
+      const finished = e.strStatus === "Match Finished" ||
+                       (e.intHomeScore !== null && e.intHomeScore !== "" && e.intHomeScore !== undefined);
+      const pre      = !finished && e.strStatus === "Not Started";
+      const status   = finished ? "post" : pre ? "pre" : "in";
+      return {
+        id:         e.idEvent   ?? crypto.randomUUID(),
+        name:       e.strEvent  ?? "",
+        date:       e.dateEvent ?? "",
+        status:     status as ScoreEvent["status"],
+        statusText: e.strStatus ?? "",
+        isLive:     status === "in",
+        homeTeam:   e.strHomeTeam ?? "",
+        homeAbbrev: (e.strHomeTeam as string)?.split(" ").pop() ?? "",
+        homeScore:  hScore,
+        awayTeam:   e.strAwayTeam ?? "",
+        awayAbbrev: (e.strAwayTeam as string)?.split(" ").pop() ?? "",
+        awayScore:  aScore,
+        homeWinner: finished && hScore !== "" && aScore !== "" &&
+                    parseInt(hScore) > parseInt(aScore),
+        awayWinner: finished && hScore !== "" && aScore !== "" &&
+                    parseInt(aScore) > parseInt(hScore),
+      };
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 20);
 }

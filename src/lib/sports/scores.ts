@@ -16,8 +16,8 @@ export const SPORTS: Sport[] = [
   { id: "golf",           label: "GOLF",     icon: "⛳", hasLiveScores: true  },
   { id: "boxing",         label: "BOXING",   icon: "🥊", hasLiveScores: true  },
   { id: "ufc",            label: "UFC",      icon: "🥋", hasLiveScores: true  },
-  { id: "snooker",        label: "SNOOKER",  icon: "🎱", hasLiveScores: false },
-  { id: "darts",          label: "DARTS",    icon: "🎯", hasLiveScores: false },
+  { id: "snooker",        label: "SNOOKER",  icon: "🎱", hasLiveScores: true  },
+  { id: "darts",          label: "DARTS",    icon: "🎯", hasLiveScores: true  },
   { id: "atp",            label: "TENNIS",   icon: "🎾", hasLiveScores: true  },
 ];
 
