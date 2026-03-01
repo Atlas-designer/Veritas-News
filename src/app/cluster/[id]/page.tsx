@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { ArticleCluster } from "@/types";
 import { fetchArticles } from "@/lib/api/client";
@@ -17,6 +17,25 @@ export default function ClusterPage() {
   const { id } = useParams<{ id: string }>();
   const [cluster, setCluster] = useState<ArticleCluster | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    const title = cluster?.articles[0]?.title ?? "Veritas News Story";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+        return;
+      } catch {
+        // user dismissed — do nothing
+        return;
+      }
+    }
+    // Fallback: copy to clipboard
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [cluster]);
 
   useEffect(() => {
     async function load() {
@@ -67,12 +86,20 @@ export default function ClusterPage() {
 
   return (
     <div className="animate-fade-in max-w-2xl mx-auto">
-      <Link
-        href="/"
-        className="data-readout text-vn-cyan text-xs hover:text-glow-cyan mb-4 inline-block"
-      >
-        &larr; BACK TO FEED
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link
+          href="/"
+          className="data-readout text-vn-cyan text-xs hover:text-glow-cyan"
+        >
+          &larr; BACK TO FEED
+        </Link>
+        <button
+          onClick={handleShare}
+          className="data-readout text-[10px] px-3 py-1.5 rounded-sm border border-vn-border text-vn-text-dim hover:border-vn-cyan/40 hover:text-vn-cyan transition-all"
+        >
+          {copied ? "✓ COPIED" : "⤴ SHARE"}
+        </button>
+      </div>
 
       {/* Cluster header */}
       <HudFrame className="mb-4">

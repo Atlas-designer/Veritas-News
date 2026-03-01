@@ -309,11 +309,6 @@ export default function NewsFeed() {
         )}
       </div>
 
-      {/* Category transparency note */}
-      <p className="data-readout text-[8px] text-vn-text-dim/40 mb-3">
-        AUTO-CATEGORISED · KEYWORD MATCHED
-      </p>
-
       {/* Sports sub-picker — visible when Sports category is active */}
       {activeCategory === "Sports" && (
         <div className="flex gap-2 overflow-x-auto pb-2 mb-3 pl-1 border-l-2 border-vn-orange/50 ml-1 scrollbar-hide">
