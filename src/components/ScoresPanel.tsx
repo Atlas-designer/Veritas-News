@@ -24,14 +24,17 @@ export default function ScoresPanel({ sport }: Props) {
   const [loading, setLoading] = useState(true);
   const [view, setView]       = useState<ViewMode>("now");
 
+  const liveScoresAvailable = sport.hasLiveScores !== false;
+
   useEffect(() => {
+    if (!liveScoresAvailable) { setLoading(false); return; }
     setLoading(true);
     setEvents([]);
     const tab = TABS.find((t) => t.id === view)!;
     fetchScores(sport.id, tab.days)
       .then(setEvents)
       .finally(() => setLoading(false));
-  }, [sport.id, view]);
+  }, [sport.id, view, liveScoresAvailable]);
 
   // For historical tabs, everything is a result
   const isHistorical = view !== "now";
@@ -83,7 +86,17 @@ export default function ScoresPanel({ sport }: Props) {
       </div>
 
       {/* ── Body ───────────────────────────────────────────────── */}
-      {loading ? (
+      {!liveScoresAvailable ? (
+        <div className="px-4 py-8 text-center space-y-2">
+          <p className="data-readout text-vn-text-dim text-[10px]">
+            LIVE SCORES NOT AVAILABLE FOR {sport.label}
+          </p>
+          <p className="text-[11px] text-vn-text-dim/60">
+            No live score data source exists for this sport yet.
+            News articles about {sport.label.toLowerCase()} are still included in your feed.
+          </p>
+        </div>
+      ) : loading ? (
         <div className="divide-y divide-vn-border/40">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3">

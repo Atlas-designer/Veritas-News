@@ -198,11 +198,11 @@ export const SOURCES: SourceDef[] = [
 ];
 
 export const BIAS_LABELS: Record<SourceDef["bias"], string> = {
-  CENTER:       "Center",
-  LEFT_CENTER:  "Left-Center",
-  LEFT:         "Left",
-  RIGHT_CENTER: "Right-Center",
-  RIGHT:        "Right",
+  CENTER:       "C",
+  LEFT_CENTER:  "L-C",
+  LEFT:         "L",
+  RIGHT_CENTER: "R-C",
+  RIGHT:        "R",
 };
 
 export const BIAS_COLORS: Record<SourceDef["bias"], string> = {

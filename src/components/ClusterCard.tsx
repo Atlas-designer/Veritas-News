@@ -12,12 +12,16 @@ interface ClusterCardProps {
 }
 
 function getTimeAgo(dateStr: string): string {
+  if (!dateStr) return "";
   const diffMs = Date.now() - new Date(dateStr).getTime();
+  if (diffMs < 0) return "just now";
   const mins = Math.floor(diffMs / 60000);
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  const days = Math.floor(hrs / 24);
+  if (days > 30) return "30d+";
+  return `${days}d ago`;
 }
 
 function getVerdict(score: number): string {
@@ -38,7 +42,9 @@ function getBarColor(score: number): string {
 export default function ClusterCard({ cluster }: ClusterCardProps) {
   const [showWhy, setShowWhy] = useState(false);
   const topArticle = cluster.articles[0];
-  const timeAgo = topArticle ? getTimeAgo(topArticle.publishedAt) : "";
+  // Prefer cluster.lastUpdated (most recent article publish time tracked by the engine)
+  // over topArticle.publishedAt, which can be stale from certain RSS feeds (e.g. WSJ).
+  const timeAgo = getTimeAgo(cluster.lastUpdated ?? topArticle?.publishedAt ?? "");
   const trustScore = Math.round(cluster.trustAggregate ?? cluster.avgValidity);
 
   // Breaking = very fresh (<2.5h → freshness >90) AND reported by 2+ independent outlets

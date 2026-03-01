@@ -61,8 +61,8 @@ export default function SignInGate({ onSignedIn }: Props) {
           <h1 className="font-display text-2xl font-bold tracking-widest text-vn-cyan">
             VERITAS
           </h1>
-          <p className="text-vn-text-dim text-sm mt-2 text-center">
-            Intelligence-grade news verification
+          <p className="text-vn-text-dim text-sm mt-2 text-center leading-relaxed">
+            All the news you need, verified by you,<br />brought to you by me.. you&apos;re welcome
           </p>
         </div>
 

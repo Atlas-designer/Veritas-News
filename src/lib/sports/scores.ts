@@ -6,17 +6,19 @@ export interface Sport {
   id: string;
   label: string;
   icon: string;
+  /** false = no live score data source; scores panel shows an info message */
+  hasLiveScores?: boolean;
 }
 
 export const SPORTS: Sport[] = [
-  { id: "premier-league", label: "FOOTBALL", icon: "⚽" },
-  { id: "rugby",          label: "RUGBY",    icon: "🏉" },
-  { id: "golf",           label: "GOLF",     icon: "⛳" },
-  { id: "boxing",         label: "BOXING",   icon: "🥊" },
-  { id: "ufc",            label: "UFC",      icon: "🥋" },
-  { id: "snooker",        label: "SNOOKER",  icon: "🎱" },
-  { id: "darts",          label: "DARTS",    icon: "🎯" },
-  { id: "atp",            label: "TENNIS",   icon: "🎾" },
+  { id: "premier-league", label: "FOOTBALL", icon: "⚽", hasLiveScores: true  },
+  { id: "rugby",          label: "RUGBY",    icon: "🏉", hasLiveScores: true  },
+  { id: "golf",           label: "GOLF",     icon: "⛳", hasLiveScores: true  },
+  { id: "boxing",         label: "BOXING",   icon: "🥊", hasLiveScores: true  },
+  { id: "ufc",            label: "UFC",      icon: "🥋", hasLiveScores: true  },
+  { id: "snooker",        label: "SNOOKER",  icon: "🎱", hasLiveScores: false },
+  { id: "darts",          label: "DARTS",    icon: "🎯", hasLiveScores: false },
+  { id: "atp",            label: "TENNIS",   icon: "🎾", hasLiveScores: true  },
 ];
 
 export async function fetchScores(sportId: string, daysBack = 0): Promise<ScoreEvent[]> {

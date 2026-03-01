@@ -14,6 +14,7 @@ import {
 } from "@/lib/categories";
 import { SPORTS, Sport } from "@/lib/sports/scores";
 import { getCustomTrustScores } from "@/lib/sources/prefs";
+import { getUsername } from "@/lib/auth/username";
 import ClusterCard from "./ClusterCard";
 import RecapIntro from "./RecapIntro";
 import ScoresPanel from "./ScoresPanel";
@@ -66,8 +67,16 @@ function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
   );
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function NewsFeed() {
   const [clusters, setClusters] = useState<ArticleCluster[]>([]);
+  const [username] = useState(() => getUsername());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fromCache, setFromCache] = useState(false);
@@ -222,9 +231,12 @@ export default function NewsFeed() {
         <h1 className="font-display text-2xl lg:text-3xl font-bold tracking-wider text-glow-cyan text-vn-cyan">
           VERITAS
         </h1>
-        <p className="text-vn-text-dim text-sm mt-1">
-          All your news in one place
-        </p>
+        {username && (
+          <p className="text-vn-text text-sm mt-1">
+            {getGreeting()},{" "}
+            <span className="text-vn-cyan font-medium capitalize">{username}</span>
+          </p>
+        )}
       </header>
 
       {/* Demo mode banner */}
