@@ -20,16 +20,31 @@ function dayLabel(dateStr: string, i: number): string {
 }
 
 
+// Only consider 08:00–20:00 for day quality — night weather is irrelevant
+const DAYTIME_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+function daytimeStats(hourly: HourlyData, dayIndex: number) {
+  const temps  = DAYTIME_HOURS.map((h) => hourly.temp[dayIndex * 24 + h] ?? 0);
+  const probs  = DAYTIME_HOURS.map((h) => hourly.precipProb[dayIndex * 24 + h] ?? 0);
+  return {
+    tempMax:    Math.max(...temps),
+    precipMax:  Math.max(...probs),
+  };
+}
+
 function bestDay(
   forecast: DayForecast[],
+  hourly: HourlyData,
   prefer: "outside" | "bed"
-): DayForecast | null {
+): { day: DayForecast; daytimePrecip: number; daytimeTemp: number } | null {
   if (!forecast.length) return null;
-  return [...forecast].sort((a, b) =>
+  const withStats = forecast.map((day, i) => ({ day, ...daytimeStats(hourly, i) }));
+  const best = [...withStats].sort((a, b) =>
     prefer === "outside"
-      ? a.precipProbMax - b.precipProbMax || b.tempMax - a.tempMax
-      : b.precipProbMax - a.precipProbMax || a.tempMax - b.tempMax
+      ? a.precipMax - b.precipMax || b.tempMax - a.tempMax
+      : b.precipMax - a.precipMax || a.tempMax - b.tempMax
   )[0];
+  return { day: best.day, daytimePrecip: best.precipMax, daytimeTemp: best.tempMax };
 }
 
 // ── Hourly breakdown ──────────────────────────────────────────────────────────
@@ -113,6 +128,8 @@ export default function WeatherPanel() {
   const [funResult, setFunResult] = useState<{
     type: string;
     day: DayForecast;
+    daytimePrecip: number;
+    daytimeTemp: number;
   } | null>(null);
   // null = none open; 0–6 = that day's hourly is expanded
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
@@ -304,14 +321,14 @@ export default function WeatherPanel() {
         </HudFrame>
       )}
 
-      {/* Fun buttons */}
-      {weather.forecast.length > 0 && (
+      {/* Fun buttons — only available once hourly data is loaded */}
+      {weather.forecast.length > 0 && weather.hourly && (
         <>
           <div className="flex gap-2">
             <button
               onClick={() => {
-                const day = bestDay(weather.forecast, "outside");
-                if (day) setFunResult({ type: "outside", day });
+                const result = bestDay(weather.forecast, weather.hourly!, "outside");
+                if (result) setFunResult({ type: "outside", ...result });
               }}
               className="flex-1 py-2 px-3 border border-vn-border rounded-sm text-[10px] font-mono text-vn-text-dim hover:border-vn-cyan/40 hover:text-vn-cyan transition-all"
             >
@@ -319,8 +336,8 @@ export default function WeatherPanel() {
             </button>
             <button
               onClick={() => {
-                const day = bestDay(weather.forecast, "bed");
-                if (day) setFunResult({ type: "bed", day });
+                const result = bestDay(weather.forecast, weather.hourly!, "bed");
+                if (result) setFunResult({ type: "bed", ...result });
               }}
               className="flex-1 py-2 px-3 border border-vn-border rounded-sm text-[10px] font-mono text-vn-text-dim hover:border-vn-cyan/40 hover:text-vn-cyan transition-all"
             >
@@ -333,11 +350,11 @@ export default function WeatherPanel() {
                 ? `☀️ ${new Date(funResult.day.date + "T00:00:00").toLocaleDateString(
                     "en-GB",
                     { weekday: "long" }
-                  )} looks best — ${funResult.day.tempMax}°C with only ${funResult.day.precipProbMax}% chance of rain`
+                  )} looks best — ${funResult.daytimeTemp}°C with only ${funResult.daytimePrecip}% chance of rain (8am–8pm)`
                 : `🛏 ${new Date(funResult.day.date + "T00:00:00").toLocaleDateString(
                     "en-GB",
                     { weekday: "long" }
-                  )} is a write-off — ${funResult.day.tempMax}°C with ${funResult.day.precipProbMax}% chance of rain`}
+                  )} is a write-off — ${funResult.daytimeTemp}°C with ${funResult.daytimePrecip}% chance of rain (8am–8pm)`}
             </div>
           )}
         </>
