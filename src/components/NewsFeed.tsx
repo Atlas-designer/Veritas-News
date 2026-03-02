@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Article, ArticleCluster } from "@/types";
 import { fetchArticles } from "@/lib/api/client";
 import { buildClusters } from "@/lib/clustering/scorer";
@@ -106,7 +105,6 @@ function getGreeting(): string {
 }
 
 export default function NewsFeed() {
-  const router = useRouter();
   const [clusters, setClusters] = useState<ArticleCluster[]>([]);
   const [username] = useState(() => getUsername());
   const [loading, setLoading] = useState(true);
@@ -187,6 +185,17 @@ export default function NewsFeed() {
     document.documentElement.dataset.region = region === "global" ? "" : region;
     localStorage.setItem("vn:region", region);
   }, [region]);
+
+  // Listen for NavBar FEED button — reset all category/sport/scores state
+  useEffect(() => {
+    const reset = () => {
+      setActiveCategory(null);
+      setActiveSport(null);
+      setShowScoresView(false);
+    };
+    window.addEventListener("vn:reset-feed", reset);
+    return () => window.removeEventListener("vn:reset-feed", reset);
+  }, []);
 
   const handleCategoryClick = useCallback((cat: Category) => {
     setActiveCategory((prev) => {
@@ -373,23 +382,6 @@ export default function NewsFeed() {
 
       {/* Category pills — single-select */}
       <div className="flex gap-2 overflow-x-auto mb-1 scrollbar-hide bg-black/30 border border-vn-border/60 rounded-sm px-2 py-2">
-        {/* Feed pill — always first, active when no category is selected */}
-        <button
-          onClick={() => {
-            setActiveCategory(null);
-            setActiveSport(null);
-            setShowScoresView(false);
-            if (window.location.pathname !== "/") router.push("/");
-          }}
-          className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-[10px] font-mono tracking-wider transition-all ${
-            !activeCategory
-              ? "border-vn-cyan bg-vn-cyan/15 text-vn-cyan"
-              : "border-vn-border text-vn-text-dim hover:border-vn-cyan/40 hover:text-vn-text"
-          }`}
-        >
-          <span>◉</span>
-          <span>FEED</span>
-        </button>
         {ALL_CATEGORIES.map((cat) => {
           const { icon, short } = CATEGORY_META[cat];
           const active = activeCategory === cat;

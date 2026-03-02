@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/",         label: "FEED",     icon: "◉" },
@@ -12,6 +12,14 @@ const navItems = [
 
 export default function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleFeed = () => {
+    // Always navigate to home
+    router.push("/");
+    // Signal NewsFeed to clear any active category/sport/scores
+    window.dispatchEvent(new CustomEvent("vn:reset-feed"));
+  };
 
   return (
     <>
@@ -20,6 +28,24 @@ export default function NavBar() {
         <div className="flex justify-around items-center h-16">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
+            if (item.href === "/") {
+              return (
+                <button
+                  key={item.href}
+                  onClick={handleFeed}
+                  className={`flex flex-col items-center gap-1 px-2 py-2 transition-all ${
+                    isActive
+                      ? "text-vn-cyan text-glow-cyan"
+                      : "text-vn-text-dim hover:text-vn-text"
+                  }`}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span className="text-[9px] font-mono tracking-widest">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            }
             return (
               <Link
                 key={item.href}
@@ -50,6 +76,24 @@ export default function NavBar() {
         </div>
         {navItems.map((item) => {
           const isActive = pathname === item.href;
+          if (item.href === "/") {
+            return (
+              <button
+                key={item.href}
+                onClick={handleFeed}
+                className={`flex flex-col items-center gap-1 px-3 py-3 rounded-sm transition-all w-full ${
+                  isActive
+                    ? "text-vn-cyan bg-vn-cyan/10 border-r-2 border-vn-cyan"
+                    : "text-vn-text-dim hover:text-vn-text hover:bg-white/5"
+                }`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="text-[8px] font-mono tracking-widest">
+                  {item.label}
+                </span>
+              </button>
+            );
+          }
           return (
             <Link
               key={item.href}
