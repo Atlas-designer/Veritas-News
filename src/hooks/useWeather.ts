@@ -14,6 +14,13 @@ export interface DayForecast {
   precipProbMax: number;
 }
 
+export interface HourlyData {
+  time: string[];       // "2026-03-02T14:00" — 168 entries (7 days × 24h)
+  temp: number[];       // rounded °C per hour
+  precipProb: number[]; // 0–100 per hour
+  icon: string[];       // pre-mapped wmo icon per hour
+}
+
 export interface WeatherState {
   loading: boolean;
   location: WeatherLocation | null;
@@ -21,6 +28,7 @@ export interface WeatherState {
   currentIcon: string | null;
   daySummary: string | null;
   forecast: DayForecast[];
+  hourly: HourlyData | null;
 }
 
 const CACHE_KEY = "vn:weather:data";
@@ -34,6 +42,7 @@ export function useWeather(): WeatherState {
     currentIcon: null,
     daySummary: null,
     forecast: [],
+    hourly: null,
   });
 
   useEffect(() => {
@@ -72,6 +81,7 @@ export function useWeather(): WeatherState {
       .then((json) => {
         const cw = json.current_weather;
         const d = json.daily;
+        const h = json.hourly;
 
         const forecast: DayForecast[] = (d.time ?? []).map(
           (date: string, i: number) => ({
@@ -84,6 +94,13 @@ export function useWeather(): WeatherState {
           })
         );
 
+        const hourly: HourlyData = {
+          time: h.time ?? [],
+          temp: (h.temperature_2m ?? []).map((t: number) => Math.round(t)),
+          precipProb: h.precipitation_probability ?? [],
+          icon: (h.weathercode ?? []).map((c: number) => wmoIcon(c)),
+        };
+
         const daySummary = buildDaySummary(json.hourly, cw.temperature);
 
         const data: WeatherState = {
@@ -93,6 +110,7 @@ export function useWeather(): WeatherState {
           currentIcon: wmoIcon(cw.weathercode),
           daySummary,
           forecast,
+          hourly,
         };
 
         try {

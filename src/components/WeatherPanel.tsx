@@ -7,7 +7,9 @@ import {
   setWeatherPrefs,
   WeatherLocation,
 } from "@/lib/weather/prefs";
-import { useWeather, DayForecast } from "@/hooks/useWeather";
+import { useWeather, DayForecast, HourlyData } from "@/hooks/useWeather";
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function dayLabel(dateStr: string, i: number): string {
   if (i === 0) return "TODAY";
@@ -15,6 +17,13 @@ function dayLabel(dateStr: string, i: number): string {
   return new Date(dateStr + "T00:00:00")
     .toLocaleDateString("en-GB", { weekday: "short" })
     .toUpperCase();
+}
+
+function fmt12(h: number): string {
+  if (h === 0) return "12am";
+  if (h < 12) return `${h}am`;
+  if (h === 12) return "12pm";
+  return `${h - 12}pm`;
 }
 
 function bestDay(
@@ -29,6 +38,54 @@ function bestDay(
   )[0];
 }
 
+// ── Hourly breakdown ──────────────────────────────────────────────────────────
+
+const STEP_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]; // every 2h = 12 rows
+
+function HourlyBreakdown({
+  hourly,
+  dayIndex,
+}: {
+  hourly: HourlyData;
+  dayIndex: number;
+}) {
+  const nowHour = new Date().getHours();
+
+  return (
+    <div className="mt-2 border-t border-vn-border/30 pt-2 grid grid-cols-2 gap-x-4">
+      {STEP_HOURS.map((h) => {
+        const idx = dayIndex * 24 + h;
+        const isPast = dayIndex === 0 && h < nowHour;
+        return (
+          <div
+            key={h}
+            className={`flex items-center gap-2 py-1 px-1 ${
+              isPast ? "opacity-35" : ""
+            }`}
+          >
+            <span className="font-mono text-[10px] text-vn-text-dim w-7 flex-shrink-0 text-right">
+              {fmt12(h)}
+            </span>
+            <span className="text-sm leading-none flex-shrink-0">
+              {hourly.icon[idx] ?? "—"}
+            </span>
+            <span className="font-mono text-[11px] text-vn-text font-bold flex-shrink-0 w-7">
+              {hourly.temp[idx] !== undefined ? `${hourly.temp[idx]}°` : "—"}
+            </span>
+            {(hourly.precipProb[idx] ?? 0) > 5 && (
+              <span className="font-mono text-[9px] text-blue-400 flex-shrink-0">
+                💧{hourly.precipProb[idx]}%
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function WeatherPanel() {
   const [prefs, setPrefsState] = useState(() => getWeatherPrefs());
   const [postcode, setPostcode] = useState("");
@@ -38,6 +95,8 @@ export default function WeatherPanel() {
     type: string;
     day: DayForecast;
   } | null>(null);
+  // null = none open; 0–6 = that day's hourly is expanded
+  const [expandedDay, setExpandedDay] = useState<number | null>(null);
 
   const weather = useWeather();
 
@@ -46,7 +105,6 @@ export default function WeatherPanel() {
       const next = { ...prefs, location: loc };
       setWeatherPrefs(next);
       setPrefsState(next);
-      // Clear session cache so useWeather re-fetches on next render
       try { sessionStorage.removeItem("vn:weather:data"); } catch {}
       window.location.reload();
     },
@@ -86,7 +144,7 @@ export default function WeatherPanel() {
     }
   };
 
-  // No location set — show setup prompt
+  // ── No location — setup prompt ──────────────────────────────────────────────
   if (!prefs.location) {
     return (
       <HudFrame title="⛅ WEATHER" className="mb-4">
@@ -145,59 +203,85 @@ export default function WeatherPanel() {
 
   return (
     <div className="mb-4 space-y-3">
-      {/* Current conditions */}
+      {/* Current conditions + today's hourly */}
       <HudFrame
         title={`⛅ WEATHER — ${prefs.location.name.toUpperCase()}`}
         className="mb-0"
       >
         {weather.currentTemp !== null ? (
-          <div className="flex items-center gap-4">
-            <span className="text-5xl leading-none">{weather.currentIcon}</span>
-            <div>
-              <div className="font-mono text-3xl font-bold text-vn-text">
-                {weather.currentTemp}°C
-              </div>
-              {weather.daySummary && (
-                <div className="text-xs text-vn-text-dim mt-1">
-                  {weather.daySummary.replace(/^\d+°C,\s*/, "")}
+          <>
+            <div className="flex items-center gap-4 mb-1">
+              <span className="text-5xl leading-none">{weather.currentIcon}</span>
+              <div>
+                <div className="font-mono text-3xl font-bold text-vn-text">
+                  {weather.currentTemp}°C
                 </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-vn-text-dim">
-            Unable to load weather data.
-          </p>
-        )}
-      </HudFrame>
-
-      {/* 7-day forecast */}
-      {weather.forecast.length > 0 && (
-        <HudFrame title="7-DAY FORECAST" className="mb-0">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-            {weather.forecast.map((day, i) => (
-              <div
-                key={day.date}
-                className="flex-shrink-0 flex flex-col items-center gap-1 p-3 rounded-sm border border-vn-border bg-vn-bg/40 min-w-[68px]"
-              >
-                <div className="data-readout text-[9px] text-vn-text-dim">
-                  {dayLabel(day.date, i)}
-                </div>
-                <div className="text-2xl leading-none my-1">{day.icon}</div>
-                <div className="font-mono text-xs text-vn-text font-bold">
-                  {day.tempMax}°
-                </div>
-                <div className="font-mono text-[10px] text-vn-text-dim">
-                  {day.tempMin}°
-                </div>
-                {day.precipProbMax > 20 && (
-                  <div className="data-readout text-[8px] text-blue-400 mt-0.5">
-                    💧{day.precipProbMax}%
+                {weather.daySummary && (
+                  <div className="text-xs text-vn-text-dim mt-1">
+                    {weather.daySummary.replace(/^\d+°C,\s*/, "")}
                   </div>
                 )}
               </div>
-            ))}
+            </div>
+            {/* Today's hourly — always visible */}
+            {weather.hourly && (
+              <HourlyBreakdown hourly={weather.hourly} dayIndex={0} />
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-vn-text-dim">Unable to load weather data.</p>
+        )}
+      </HudFrame>
+
+      {/* 7-day forecast — clickable for hourly dropdown */}
+      {weather.forecast.length > 0 && (
+        <HudFrame title="7-DAY FORECAST" className="mb-0">
+          {/* Scrollable day cards */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {weather.forecast.map((day, i) => {
+              const isExpanded = expandedDay === i;
+              return (
+                <button
+                  key={day.date}
+                  onClick={() => setExpandedDay(isExpanded ? null : i)}
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 p-3 rounded-sm border transition-all min-w-[68px] ${
+                    isExpanded
+                      ? "border-vn-cyan bg-vn-cyan/10 text-vn-cyan"
+                      : "border-vn-border bg-vn-bg/40 hover:border-vn-cyan/40"
+                  }`}
+                >
+                  <div className={`data-readout text-[9px] ${isExpanded ? "text-vn-cyan" : "text-vn-text-dim"}`}>
+                    {dayLabel(day.date, i)}
+                  </div>
+                  <div className="text-2xl leading-none my-1">{day.icon}</div>
+                  <div className={`font-mono text-xs font-bold ${isExpanded ? "text-vn-cyan" : "text-vn-text"}`}>
+                    {day.tempMax}°
+                  </div>
+                  <div className="font-mono text-[10px] text-vn-text-dim">
+                    {day.tempMin}°
+                  </div>
+                  {day.precipProbMax > 20 && (
+                    <div className="data-readout text-[8px] text-blue-400 mt-0.5">
+                      💧{day.precipProbMax}%
+                    </div>
+                  )}
+                  <div className={`data-readout text-[7px] mt-0.5 ${isExpanded ? "text-vn-cyan" : "text-vn-text-dim"}`}>
+                    {isExpanded ? "▴" : "▾"}
+                  </div>
+                </button>
+              );
+            })}
           </div>
+
+          {/* Hourly dropdown for selected day */}
+          {expandedDay !== null && weather.hourly && (
+            <div className="mt-3 border-t border-vn-border/40 pt-3">
+              <div className="data-readout text-[9px] text-vn-cyan tracking-widest mb-1">
+                {dayLabel(weather.forecast[expandedDay]?.date ?? "", expandedDay)} — HOURLY BREAKDOWN
+              </div>
+              <HourlyBreakdown hourly={weather.hourly} dayIndex={expandedDay} />
+            </div>
+          )}
         </HudFrame>
       )}
 

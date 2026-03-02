@@ -320,17 +320,12 @@ export default function NewsFeed() {
           </p>
         )}
         {weather.daySummary && (
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-vn-text-dim text-xs font-mono">
-              {weather.currentIcon} {weather.daySummary}
-            </p>
-            <button
-              onClick={() => setActiveCategory("Weather")}
-              className="data-readout text-[9px] text-vn-cyan border border-vn-cyan/40 px-2 py-0.5 rounded-sm hover:bg-vn-cyan/10 transition-all flex-shrink-0"
-            >
-              SEE MORE →
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveCategory("Weather")}
+            className="text-vn-text-dim text-xs font-mono mt-1 hover:text-vn-text transition-colors text-left"
+          >
+            {weather.currentIcon} {weather.daySummary}
+          </button>
         )}
       </header>
 
