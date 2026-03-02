@@ -12,6 +12,17 @@ import ArticleCard from "@/components/ArticleCard";
 import SourceBadge from "@/components/SourceBadge";
 import Link from "next/link";
 import { FeedSkeleton } from "@/components/ui/Skeleton";
+import { SOURCES } from "@/lib/sources/list";
+import { getCustomTrustScores } from "@/lib/sources/prefs";
+
+// Mirror the region disabled logic from NewsFeed so cluster IDs match
+const UK_DOMAINS = new Set(SOURCES.filter((s) => s.country === "UK").map((s) => s.domain));
+const US_DOMAINS = new Set(SOURCES.filter((s) => s.country === "US").map((s) => s.domain));
+function getRegionDisabled(r: string): Set<string> | undefined {
+  if (r === "global") return undefined;
+  const keep = r === "uk" ? UK_DOMAINS : US_DOMAINS;
+  return new Set(SOURCES.filter((s) => !keep.has(s.domain)).map((s) => s.domain));
+}
 
 export default function ClusterPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,9 +52,25 @@ export default function ClusterPage() {
     async function load() {
       setLoading(true);
       try {
-        const result = await fetchArticles();
-        const articles =
-          result.articles.length > 0 ? result.articles : mockArticles;
+        const region =
+          (typeof window !== "undefined"
+            ? localStorage.getItem("vn:region")
+            : null) ?? "global";
+
+        const result = await fetchArticles({ extraDisabled: getRegionDisabled(region) });
+        let articles = result.articles.length > 0 ? result.articles : mockArticles;
+
+        // Apply custom trust overrides so scoring matches the feed
+        const customTrustMap = getCustomTrustScores();
+        if (Object.keys(customTrustMap).length > 0) {
+          articles = articles.map((a) => {
+            const custom = customTrustMap[a.source.domain];
+            return custom !== undefined
+              ? { ...a, source: { ...a.source, factualRating: custom } }
+              : a;
+          });
+        }
+
         const clusters = buildClusters(articles);
         const decoded = decodeURIComponent(id);
         const found = clusters.find((c) => c.id === decoded);
