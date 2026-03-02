@@ -15,6 +15,33 @@
   --vn-green:  #5fb85f;
 }
 
+/* ── Region themes ──────────────────────────────────────────────────────── */
+[data-region="uk"] { --vn-cyan: #CF142B; }
+[data-region="us"] { --vn-cyan: #2D62A3; }
+
+/* Tailwind utility overrides — classes hardcode hex so need explicit rules */
+[data-region="uk"] .text-vn-cyan,
+[data-region="uk"] .hover\:text-vn-cyan:hover   { color: #CF142B; }
+[data-region="uk"] .border-vn-cyan              { border-color: #CF142B; }
+[data-region="uk"] .bg-vn-cyan                  { background-color: #CF142B; }
+[data-region="uk"] .border-vn-cyan\/40          { border-color: rgba(207,20,43,0.4); }
+[data-region="uk"] .border-vn-cyan\/50          { border-color: rgba(207,20,43,0.5); }
+[data-region="uk"] .border-vn-cyan\/60          { border-color: rgba(207,20,43,0.6); }
+[data-region="uk"] .bg-vn-cyan\/10              { background-color: rgba(207,20,43,0.1); }
+[data-region="uk"] .bg-vn-cyan\/15              { background-color: rgba(207,20,43,0.15); }
+[data-region="uk"] .from-vn-cyan\/50            { --tw-gradient-from: rgba(207,20,43,0.5); }
+
+[data-region="us"] .text-vn-cyan,
+[data-region="us"] .hover\:text-vn-cyan:hover   { color: #2D62A3; }
+[data-region="us"] .border-vn-cyan              { border-color: #2D62A3; }
+[data-region="us"] .bg-vn-cyan                  { background-color: #2D62A3; }
+[data-region="us"] .border-vn-cyan\/40          { border-color: rgba(45,98,163,0.4); }
+[data-region="us"] .border-vn-cyan\/50          { border-color: rgba(45,98,163,0.5); }
+[data-region="us"] .border-vn-cyan\/60          { border-color: rgba(45,98,163,0.6); }
+[data-region="us"] .bg-vn-cyan\/10              { background-color: rgba(45,98,163,0.1); }
+[data-region="us"] .bg-vn-cyan\/15              { background-color: rgba(45,98,163,0.15); }
+[data-region="us"] .from-vn-cyan\/50            { --tw-gradient-from: rgba(45,98,163,0.5); }
+
 /* ── Reset ──────────────────────────────────────────────────────────────── */
 * {
   margin: 0;

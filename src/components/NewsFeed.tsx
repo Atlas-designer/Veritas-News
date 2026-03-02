@@ -13,6 +13,7 @@ import {
   Category,
 } from "@/lib/categories";
 import { SPORTS, Sport } from "@/lib/sports/scores";
+import { SOURCES } from "@/lib/sources/list";
 import { getCustomTrustScores } from "@/lib/sources/prefs";
 import { getUsername } from "@/lib/auth/username";
 import ClusterCard from "./ClusterCard";
@@ -21,6 +22,20 @@ import ScoresPanel from "./ScoresPanel";
 import { FeedSkeleton } from "./ui/Skeleton";
 
 type SortMode = "top" | "latest";
+type Region   = "global" | "uk" | "us";
+
+const REGION_META: Record<Region, { label: string; flag: string }> = {
+  global: { label: "GLOBAL", flag: "🌍" },
+  uk:     { label: "UK",     flag: "🇬🇧" },
+  us:     { label: "US",     flag: "🇺🇸" },
+};
+
+const UK_DOMAINS = new Set(SOURCES.filter((s) => s.country === "UK").map((s) => s.domain));
+const US_DOMAINS = new Set(SOURCES.filter((s) => s.country === "US").map((s) => s.domain));
+const UK_KEYWORDS = ["uk", "britain", "british", "england", "scotland", "wales",
+                     "london", "parliament", "nhs", "downing street"];
+const US_KEYWORDS = ["us ", "usa", "american", "america", "washington",
+                     "white house", "congress", "senate", "pentagon", "new york"];
 
 // ── Rolling news ticker ───────────────────────────────────────────────────────
 
@@ -79,8 +94,13 @@ export default function NewsFeed() {
   const [username] = useState(() => getUsername());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fromCache, setFromCache] = useState(false);
   const [usingDemo, setUsingDemo] = useState(false);
+  const [region, setRegion] = useState<Region>(() =>
+    typeof window !== "undefined"
+      ? ((localStorage.getItem("vn:region") as Region) ?? "global")
+      : "global"
+  );
+  const [showRegionMenu, setShowRegionMenu] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("top");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [recap, setRecap] = useState<RecapSummary | null>(null);
@@ -108,7 +128,6 @@ export default function NewsFeed() {
         setUsingDemo(false);
       }
 
-      setFromCache(result.fromCache);
       const built = buildClusters(articles);
       setClusters(built);
       setLastUpdated(new Date());
@@ -133,6 +152,11 @@ export default function NewsFeed() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    document.documentElement.dataset.region = region === "global" ? "" : region;
+    localStorage.setItem("vn:region", region);
+  }, [region]);
 
   const handleCategoryClick = useCallback((cat: Category) => {
     setActiveCategory((prev) => {
@@ -194,6 +218,14 @@ export default function NewsFeed() {
         return effective < 20;
       });
       return !allLowTrust;
+    })
+    .filter((c) => {
+      if (region === "global") return true;
+      const domains  = region === "uk" ? UK_DOMAINS  : US_DOMAINS;
+      const keywords = region === "uk" ? UK_KEYWORDS : US_KEYWORDS;
+      const sourceMatch = c.sources.some((s) => domains.has(s.domain));
+      const text = (c.topic + " " + (c.articles[0]?.title ?? "")).toLowerCase();
+      return sourceMatch || keywords.some((kw) => text.includes(kw));
     });
 
   const handleRecapDone = useCallback(() => {
@@ -215,13 +247,49 @@ export default function NewsFeed() {
         <div className="flex items-center gap-3 mb-1">
           <div className="status-dot live" />
           <span className="data-readout text-vn-green">Live Feed</span>
-          <span className="data-readout text-vn-text-dim ml-auto">
-            {new Date().toLocaleDateString("en-US", {
-              month: "short",
-              day: "2-digit",
-              year: "numeric",
-            })}
-          </span>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="data-readout text-vn-text-dim">
+              {new Date().toLocaleDateString("en-US", {
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+              })}
+            </span>
+
+            {/* Region selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowRegionMenu((v) => !v)}
+                className="data-readout text-[10px] px-2 py-1 rounded-sm border border-vn-border text-vn-text-dim hover:border-vn-cyan/40 hover:text-vn-cyan transition-all flex items-center gap-1"
+              >
+                <span>{REGION_META[region].flag}</span>
+                <span>{REGION_META[region].label}</span>
+                <span className="text-[8px]">▾</span>
+              </button>
+              {showRegionMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowRegionMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-vn-panel border border-vn-border rounded-sm overflow-hidden min-w-[110px]">
+                    {(["global", "uk", "us"] as Region[]).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => { setRegion(r); setShowRegionMenu(false); }}
+                        className={`w-full text-left px-3 py-2 data-readout text-[10px] flex items-center gap-2 transition-colors ${
+                          region === r
+                            ? "text-vn-cyan bg-vn-cyan/10"
+                            : "text-vn-text-dim hover:text-vn-text hover:bg-vn-border"
+                        }`}
+                      >
+                        <span>{REGION_META[r].flag}</span>
+                        <span>{REGION_META[r].label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
         <h1 className="font-display text-2xl lg:text-3xl font-bold tracking-wider text-glow-cyan text-vn-cyan">
           VERITAS
