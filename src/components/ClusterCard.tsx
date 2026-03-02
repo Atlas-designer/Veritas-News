@@ -109,7 +109,7 @@ export default function ClusterCard({ cluster }: ClusterCardProps) {
 
             {/* Trust meter + WHY button */}
             <div className="flex flex-col items-center gap-2 flex-shrink-0">
-              <TrustMeter score={trustScore} size={56} />
+              <TrustMeter score={trustScore} size={44} />
               <button
                 onClick={(e) => {
                   e.preventDefault();

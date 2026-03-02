@@ -215,11 +215,6 @@ export default function NewsFeed() {
         <div className="flex items-center gap-3 mb-1">
           <div className="status-dot live" />
           <span className="data-readout text-vn-green">Live Feed</span>
-          {fromCache && (
-            <span className="data-readout text-[9px] text-vn-text-dim">
-              CACHED
-            </span>
-          )}
           <span className="data-readout text-vn-text-dim ml-auto">
             {new Date().toLocaleDateString("en-US", {
               month: "short",

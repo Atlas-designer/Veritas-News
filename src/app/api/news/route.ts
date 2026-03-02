@@ -184,9 +184,11 @@ function mapItem(
     title: item.title.trim(),
     url: item.link,
     source,
-    publishedAt: item.pubDate
-      ? new Date(item.pubDate).toISOString()
-      : new Date().toISOString(),
+    publishedAt: (() => {
+      if (!item.pubDate) return "";
+      const d = new Date(item.pubDate);
+      return isNaN(d.getTime()) ? "" : d.toISOString();
+    })(),
     summary: stripHtml(item.contentSnippet ?? item.content ?? "").slice(0, 300),
     sentiment: 0,
     validityScore: 0,
