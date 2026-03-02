@@ -375,7 +375,12 @@ export default function NewsFeed() {
       <div className="flex gap-2 overflow-x-auto mb-1 scrollbar-hide bg-black/30 border border-vn-border/60 rounded-sm px-2 py-2">
         {/* Feed pill — always first, active when no category is selected */}
         <button
-          onClick={() => { setActiveCategory(null); setActiveSport(null); setShowScoresView(false); router.push("/"); }}
+          onClick={() => {
+            setActiveCategory(null);
+            setActiveSport(null);
+            setShowScoresView(false);
+            if (window.location.pathname !== "/") router.push("/");
+          }}
           className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-[10px] font-mono tracking-wider transition-all ${
             !activeCategory
               ? "border-vn-cyan bg-vn-cyan/15 text-vn-cyan"
