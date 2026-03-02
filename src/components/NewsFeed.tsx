@@ -32,11 +32,6 @@ const REGION_META: Record<Region, { label: string; flag: string }> = {
 
 const UK_DOMAINS = new Set(SOURCES.filter((s) => s.country === "UK").map((s) => s.domain));
 const US_DOMAINS = new Set(SOURCES.filter((s) => s.country === "US").map((s) => s.domain));
-const UK_KEYWORDS = ["uk", "britain", "british", "england", "scotland", "wales",
-                     "london", "parliament", "nhs", "downing street"];
-const US_KEYWORDS = ["us ", "usa", "american", "america", "washington",
-                     "white house", "congress", "senate", "pentagon", "new york"];
-
 // ── Rolling news ticker ───────────────────────────────────────────────────────
 
 function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
@@ -221,11 +216,8 @@ export default function NewsFeed() {
     })
     .filter((c) => {
       if (region === "global") return true;
-      const domains  = region === "uk" ? UK_DOMAINS  : US_DOMAINS;
-      const keywords = region === "uk" ? UK_KEYWORDS : US_KEYWORDS;
-      const sourceMatch = c.sources.some((s) => domains.has(s.domain));
-      const text = (c.topic + " " + (c.articles[0]?.title ?? "")).toLowerCase();
-      return sourceMatch || keywords.some((kw) => text.includes(kw));
+      const domains = region === "uk" ? UK_DOMAINS : US_DOMAINS;
+      return c.sources.some((s) => domains.has(s.domain));
     });
 
   const handleRecapDone = useCallback(() => {
