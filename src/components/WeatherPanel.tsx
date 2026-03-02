@@ -19,12 +19,6 @@ function dayLabel(dateStr: string, i: number): string {
     .toUpperCase();
 }
 
-function fmt12(h: number): string {
-  if (h === 0) return "12am";
-  if (h < 12) return `${h}am`;
-  if (h === 12) return "12pm";
-  return `${h - 12}pm`;
-}
 
 function bestDay(
   forecast: DayForecast[],
@@ -40,7 +34,33 @@ function bestDay(
 
 // ── Hourly breakdown ──────────────────────────────────────────────────────────
 
-const STEP_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]; // every 2h = 12 rows
+const AM_HOURS = [0, 2, 4, 6, 8, 10];      // 00:00 – 10:00  (left column)
+const PM_HOURS = [12, 14, 16, 18, 20, 22];  // 12:00 – 22:00  (right column)
+
+function HourRow({
+  h, idx, isPast, hourly,
+}: {
+  h: number; idx: number; isPast: boolean; hourly: HourlyData;
+}) {
+  return (
+    <div className={`flex items-center gap-2 py-1 px-1 ${isPast ? "opacity-35" : ""}`}>
+      <span className="font-mono text-[10px] text-vn-text-dim w-10 flex-shrink-0">
+        {String(h).padStart(2, "0")}:00
+      </span>
+      <span className="text-sm leading-none flex-shrink-0">
+        {hourly.icon[idx] ?? "—"}
+      </span>
+      <span className="font-mono text-[11px] text-vn-text font-bold flex-shrink-0 w-7">
+        {hourly.temp[idx] !== undefined ? `${hourly.temp[idx]}°` : "—"}
+      </span>
+      {(hourly.precipProb[idx] ?? 0) > 5 && (
+        <span className="font-mono text-[9px] text-blue-400 flex-shrink-0">
+          💧{hourly.precipProb[idx]}%
+        </span>
+      )}
+    </div>
+  );
+}
 
 function HourlyBreakdown({
   hourly,
@@ -52,34 +72,33 @@ function HourlyBreakdown({
   const nowHour = new Date().getHours();
 
   return (
-    <div className="mt-2 border-t border-vn-border/30 pt-2 grid grid-cols-2 gap-x-4">
-      {STEP_HOURS.map((h) => {
-        const idx = dayIndex * 24 + h;
-        const isPast = dayIndex === 0 && h < nowHour;
-        return (
-          <div
+    <div className="mt-2 border-t border-vn-border/30 pt-2 flex gap-2">
+      {/* AM column — 00:00 to 10:00 */}
+      <div className="flex-1 border-r border-vn-border/20 pr-2">
+        <div className="data-readout text-[8px] text-vn-text-dim tracking-widest mb-1 px-1">AM</div>
+        {AM_HOURS.map((h) => (
+          <HourRow
             key={h}
-            className={`flex items-center gap-2 py-1 px-1 ${
-              isPast ? "opacity-35" : ""
-            }`}
-          >
-            <span className="font-mono text-[10px] text-vn-text-dim w-7 flex-shrink-0 text-right">
-              {fmt12(h)}
-            </span>
-            <span className="text-sm leading-none flex-shrink-0">
-              {hourly.icon[idx] ?? "—"}
-            </span>
-            <span className="font-mono text-[11px] text-vn-text font-bold flex-shrink-0 w-7">
-              {hourly.temp[idx] !== undefined ? `${hourly.temp[idx]}°` : "—"}
-            </span>
-            {(hourly.precipProb[idx] ?? 0) > 5 && (
-              <span className="font-mono text-[9px] text-blue-400 flex-shrink-0">
-                💧{hourly.precipProb[idx]}%
-              </span>
-            )}
-          </div>
-        );
-      })}
+            h={h}
+            idx={dayIndex * 24 + h}
+            isPast={dayIndex === 0 && h < nowHour}
+            hourly={hourly}
+          />
+        ))}
+      </div>
+      {/* PM column — 12:00 to 22:00 */}
+      <div className="flex-1 pl-1">
+        <div className="data-readout text-[8px] text-vn-text-dim tracking-widest mb-1 px-1">PM</div>
+        {PM_HOURS.map((h) => (
+          <HourRow
+            key={h}
+            h={h}
+            idx={dayIndex * 24 + h}
+            isPast={dayIndex === 0 && h < nowHour}
+            hourly={hourly}
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -370,7 +370,7 @@ export default function NewsFeed() {
       </div>
 
       {/* Category pills — single-select */}
-      <div className="flex gap-2 overflow-x-auto pb-1 mb-1 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto mb-1 scrollbar-hide bg-black/30 border border-vn-border/60 rounded-sm px-2 py-2">
         {ALL_CATEGORIES.map((cat) => {
           const { icon, short } = CATEGORY_META[cat];
           const active = activeCategory === cat;
