@@ -221,6 +221,14 @@ function renderRow(
 
 // ── Tennis tournament row ──────────────────────────────────────────────────
 
+// Combine per-set linescore strings "7 6" + "5 1" → "7-5  6-1"
+function formatSetScores(home: string | undefined, away: string | undefined): string {
+  const h = (home ?? "").split(" ").filter(Boolean);
+  const a = (away ?? "").split(" ").filter(Boolean);
+  if (h.length === 0) return "";
+  return h.map((v, i) => `${v}-${a[i] ?? "??"}`).join("  ");
+}
+
 function TournamentRow({ event, expanded, onToggle }: {
   event: ScoreEvent;
   expanded: boolean;
@@ -261,27 +269,33 @@ function TournamentRow({ event, expanded, onToggle }: {
       {expanded && matches.length > 0 && (
         <div className="border-t border-vn-border/20 bg-vn-bg/30 divide-y divide-vn-border/20">
           {matches.map((m) => (
-            <div key={m.id} className="px-4 py-2 flex items-center gap-2">
+            <div key={m.id} className="px-3 py-2">
+              {/* Round label */}
               {m.round && (
-                <span className="data-readout text-[8px] text-vn-orange w-10 flex-shrink-0 truncate">
+                <p className="data-readout text-[8px] text-vn-orange mb-1 truncate">
                   {m.round.toUpperCase()}
-                </span>
+                </p>
               )}
-              <span className={`font-mono text-[11px] flex-1 text-right truncate ${
-                m.homeWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
-              }`}>
-                {m.homeName}
-              </span>
-              <span className={`font-mono text-[12px] font-bold w-16 text-center flex-shrink-0 tabular-nums ${
-                m.isLive ? "text-vn-green" : m.status === "post" ? "text-vn-cyan" : "text-vn-text-dim"
-              }`}>
-                {m.status === "pre" ? "vs" : `${m.homeScore}–${m.awayScore}`}
-              </span>
-              <span className={`font-mono text-[11px] flex-1 truncate ${
-                m.awayWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
-              }`}>
-                {m.awayName}
-              </span>
+              {/* Players + score */}
+              <div className="flex items-center gap-2">
+                <span className={`font-mono text-[11px] flex-1 text-right truncate ${
+                  m.homeWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+                }`}>
+                  {m.homeName}
+                </span>
+                <span className={`font-mono text-[11px] font-bold flex-shrink-0 tabular-nums text-center min-w-[4.5rem] ${
+                  m.isLive ? "text-vn-green" : m.status === "post" ? "text-vn-cyan" : "text-vn-text-dim"
+                }`}>
+                  {m.status === "pre"
+                    ? "vs"
+                    : formatSetScores(m.homeScore, m.awayScore) || "—"}
+                </span>
+                <span className={`font-mono text-[11px] flex-1 truncate ${
+                  m.awayWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+                }`}>
+                  {m.awayName}
+                </span>
+              </div>
             </div>
           ))}
         </div>

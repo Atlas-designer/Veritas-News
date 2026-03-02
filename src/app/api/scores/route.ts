@@ -162,7 +162,7 @@ export async function GET(request: Request) {
       sport === "ufc" || sport === "boxing"
         ? normalizeMMA(raw.events ?? [])
         : sport === "atp" || sport === "wta" || sport === "atp-doubles" || sport === "wta-doubles"
-          ? normalizeTennis(raw.events ?? [])
+          ? normalizeTennis(raw.events ?? [], sport)
           : normalizeEvents(raw.events ?? []);
 
     cache.set(cacheKey, { data: events, ts: Date.now() });
@@ -288,8 +288,11 @@ function normalizeMMA(rawEvents: any[]): ScoreEvent[] {
 }
 
 // ── Tennis normaliser ─────────────────────────────────────────────────────
-// ESPN tennis: each event = a tournament; competitions[] = individual matches.
-// We collect all matches into the `matches` field for drill-down in the UI.
+// ESPN tennis structure (confirmed):
+//   event { name, date, groupings: [{ grouping: { slug, displayName }, competitions: [...] }] }
+//   competition { id, round: { displayName }, competitors: [{ homeAway, winner, athlete,
+//                  linescores: [{ value }] }] }
+// Scores come from linescores[] (per-set values), not a single score field.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getTennisName(c: any): string {
@@ -305,103 +308,111 @@ function getTennisName(c: any): string {
   );
 }
 
+// Build "7 6" / "5 1" set-score strings from a competitor's linescores array.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeTennis(rawEvents: any[]): ScoreEvent[] {
+function linescore(competitor: any): string {
+  const ls: any[] = competitor?.linescores ?? [];
+  return ls.map((s: any) => String(s?.value ?? "")).join(" ");
+}
+
+// Which grouping slug to prefer for each ESPN endpoint
+const TENNIS_SLUG: Record<string, string> = {
+  "atp":          "mens-singles",
+  "wta":          "womens-singles",
+  "atp-doubles":  "mens-doubles",
+  "wta-doubles":  "womens-doubles",
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeTennis(rawEvents: any[], sport: string): ScoreEvent[] {
+  const preferred = TENNIS_SLUG[sport] ?? "";
   const sorted = rawEvents
-    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime());
+    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    .slice(0, 6);
 
-  // Debug: log the structure of the first event to the server console
-  if (sorted.length > 0) {
-    const s = sorted[0];
-    console.log(
-      `[tennis] ${sorted.length} events | first="${s.name}" comps=${s.competitions?.length ?? 0}` +
-      (s.competitions?.[0] ? ` | comp0 competitors=${s.competitions[0].competitors?.length ?? 0}` : "") +
-      (s.competitors ? ` | event-level competitors=${s.competitors.length}` : ""),
-    );
-  }
+  const results: ScoreEvent[] = [];
 
-  // Detect whether ESPN returned individual match events (each event = one match)
-  // vs tournament events (each event = a tournament with many competitions).
-  // Heuristic: if the majority of events have ≤ 2 competitions each, treat as match events.
-  const avgComps = sorted.length > 0
-    ? sorted.slice(0, 5).reduce((sum, e) => sum + (e.competitions?.length ?? 0), 0) / Math.min(5, sorted.length)
-    : 0;
-  const isMatchEvents = avgComps <= 2;
+  for (const event of sorted) {
+    const eventName: string = event.name ?? "";
+    const eventDate: string = event.date ?? "";
 
-  if (isMatchEvents) {
-    // Each ESPN event = one individual match — render directly as MatchRow entries.
-    // Group by tournament name so we can bucket them under a TournamentRow.
-    const grouped = new Map<string, { name: string; date: string; events: any[] }>();
-    for (const e of sorted) {
-      // Try several fields for the tournament name
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tourneyName: string =
-        (e as any).season?.displayName ??
-        (e as any).season?.name ??
-        (e as any).tournament?.displayName ??
-        (e as any).tournament?.name ??
-        e.name ??
-        "Tournament";
-      if (!grouped.has(tourneyName)) grouped.set(tourneyName, { name: tourneyName, date: e.date ?? "", events: [] });
-      grouped.get(tourneyName)!.events.push(e);
+    // ── New-style ESPN structure: groupings[i].competitions[] ──────────────
+    const groupings: any[] = event.groupings ?? [];
+    if (groupings.length > 0) {
+      // Prefer the draw matching this endpoint (e.g. mens-singles for ATP).
+      // Fall back to showing all draws if none match.
+      const prefGroups = preferred
+        ? groupings.filter((g: any) => g.grouping?.slug === preferred)
+        : groupings;
+      const activeGroups: any[] = prefGroups.length > 0 ? prefGroups : groupings;
+
+      for (const g of activeGroups) {
+        const groupSlug: string  = g.grouping?.slug ?? "";
+        const groupLabel: string = g.grouping?.displayName ?? "";
+        const competitions: any[] = g.competitions ?? [];
+        if (competitions.length === 0) continue;
+
+        const matches = competitions.flatMap(
+          (comp: any): NonNullable<ScoreEvent["matches"]>[number][] => {
+            const competitors: any[] = comp.competitors ?? [];
+            if (competitors.length < 2) return [];
+            const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0];
+            const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1];
+            const homeName = getTennisName(home);
+            const awayName = getTennisName(away);
+            if (!homeName && !awayName) return [];
+
+            const compState = comp.status?.type?.state ?? "pre";
+            const hasScores = compState === "post" || compState === "in";
+
+            return [{
+              id:         comp.id ?? crypto.randomUUID(),
+              round:      comp.round?.displayName ?? comp.type?.text ?? "",
+              homeName,
+              homeScore:  hasScores ? linescore(home) : "",
+              homeWinner: home.winner ?? false,
+              awayName,
+              awayScore:  hasScores ? linescore(away) : "",
+              awayWinner: away.winner ?? false,
+              status:     compState as "pre" | "in" | "post",
+              statusText: comp.status?.type?.shortDetail ?? "",
+              isLive:     compState === "in",
+            }];
+          },
+        );
+
+        if (matches.length === 0) continue;
+
+        const hasLive = matches.some((m) => m.isLive);
+        const hasPre  = matches.some((m) => m.status === "pre");
+        const hasPost = matches.some((m) => m.status === "post");
+        const aggState: ScoreEvent["status"] = hasLive ? "in" : hasPre ? "pre" : hasPost ? "post" : "pre";
+
+        // Include draw label in the row name when we're showing a fallback grouping
+        const rowName = groupLabel
+          ? `${eventName} — ${groupLabel}`
+          : eventName;
+
+        results.push({
+          id:         `${event.id}-${groupSlug}`,
+          name:       rowName,
+          date:       eventDate,
+          status:     aggState,
+          statusText: event.status?.type?.shortDetail ?? "",
+          isLive:     hasLive,
+          matches,
+        });
+      }
+      continue; // done with this event
     }
 
-    return Array.from(grouped.values())
-      .slice(0, 6)
-      .map(({ name, date, events: evs }) => {
-        const latestState = evs[0]?.status?.type?.state ?? "pre";
-        const statusText  = evs[0]?.status?.type?.shortDetail ?? evs[0]?.status?.type?.description ?? "";
-        const isLive      = evs.some((e: any) => e.status?.type?.state === "in");
-        const aggState    = isLive ? "in" : latestState;
+    // ── Fallback: older ESPN structure with competitions[] on the event ─────
+    const state      = event.status?.type?.state ?? "pre";
+    const statusText = event.status?.type?.shortDetail ?? event.status?.type?.description ?? "";
+    const competitions: any[] = event.competitions ?? [];
 
-        const matches = evs.flatMap((e: any): NonNullable<ScoreEvent["matches"]>[number][] => {
-          // Players may be in competitions[0].competitors or directly in e.competitors
-          const comp = e.competitions?.[0];
-          const competitors: any[] = comp?.competitors ?? e.competitors ?? [];
-          if (competitors.length < 2) return [];
-          const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0];
-          const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1];
-          const homeName = getTennisName(home);
-          const awayName = getTennisName(away);
-          if (!homeName && !awayName) return [];
-          const compState = comp?.status?.type?.state ?? e.status?.type?.state ?? "pre";
-          const hasScores = compState === "in" || compState === "post";
-          return [{
-            id:         e.id ?? comp?.id ?? crypto.randomUUID(),
-            round:      comp?.type?.text ?? comp?.type?.abbreviation ?? e.type?.text ?? "",
-            homeName,
-            homeScore:  hasScores ? (home.score ?? "") : "",
-            homeWinner: home.winner ?? false,
-            awayName,
-            awayScore:  hasScores ? (away.score ?? "") : "",
-            awayWinner: away.winner ?? false,
-            status:     compState as "pre" | "in" | "post",
-            statusText: comp?.status?.type?.shortDetail ?? "",
-            isLive:     compState === "in",
-          }];
-        });
-
-        return {
-          id:         name + "-" + (evs[0]?.id ?? "t"),
-          name,
-          date,
-          status:     aggState as ScoreEvent["status"],
-          statusText,
-          isLive,
-          matches:    matches.length > 0 ? matches : undefined,
-        };
-      });
-  }
-
-  // Tournament events: each ESPN event = a tournament; competitions[] = individual matches.
-  return sorted
-    .slice(0, 12)
-    .map((e) => {
-      const state      = e.status?.type?.state ?? "pre";
-      const statusText = e.status?.type?.shortDetail ?? e.status?.type?.description ?? "";
-      const competitions: any[] = e.competitions ?? [];
-
-      const matches = competitions.flatMap((comp: any): NonNullable<ScoreEvent["matches"]>[number][] => {
+    const matches = competitions.flatMap(
+      (comp: any): NonNullable<ScoreEvent["matches"]>[number][] => {
         const competitors: any[] = comp.competitors ?? [];
         if (competitors.length < 2) return [];
         const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0];
@@ -413,57 +424,32 @@ function normalizeTennis(rawEvents: any[]): ScoreEvent[] {
         const hasScores = compState === "in" || compState === "post";
         return [{
           id:         comp.id ?? crypto.randomUUID(),
-          round:      comp.type?.text ?? comp.type?.abbreviation ?? comp.type?.name ?? "",
+          round:      comp.round?.displayName ?? comp.type?.text ?? comp.type?.abbreviation ?? "",
           homeName,
-          homeScore:  hasScores ? (home.score ?? "") : "",
+          homeScore:  hasScores ? linescore(home) || (home.score ?? "") : "",
           homeWinner: home.winner ?? false,
           awayName,
-          awayScore:  hasScores ? (away.score ?? "") : "",
+          awayScore:  hasScores ? linescore(away) || (away.score ?? "") : "",
           awayWinner: away.winner ?? false,
           status:     compState as "pre" | "in" | "post",
           statusText: comp.status?.type?.shortDetail ?? "",
           isLive:     compState === "in",
         }];
-      });
+      },
+    );
 
-      // Fallback: try event-level competitors if competitions yielded nothing
-      const evComps: any[] = e.competitors ?? [];
-      if (matches.length === 0 && evComps.length >= 2) {
-        const h = evComps.find((c: any) => c.homeAway === "home") ?? evComps[0];
-        const a = evComps.find((c: any) => c.homeAway === "away") ?? evComps[1];
-        const hName = getTennisName(h);
-        const aName = getTennisName(a);
-        if (hName || aName) {
-          const hasScores = state === "in" || state === "post";
-          return {
-            id:         e.id ?? crypto.randomUUID(),
-            name:       e.name ?? "",
-            date:       e.date ?? "",
-            status:     state as ScoreEvent["status"],
-            statusText,
-            isLive:     state === "in",
-            homeTeam:   hName,
-            homeAbbrev: h?.athlete?.shortName ?? hName.split(" ").pop() ?? "",
-            homeScore:  hasScores ? (h?.score ?? "") : "",
-            homeWinner: h?.winner ?? false,
-            awayTeam:   aName,
-            awayAbbrev: a?.athlete?.shortName ?? aName.split(" ").pop() ?? "",
-            awayScore:  hasScores ? (a?.score ?? "") : "",
-            awayWinner: a?.winner ?? false,
-          };
-        }
-      }
-
-      return {
-        id:         e.id ?? crypto.randomUUID(),
-        name:       e.name ?? "",
-        date:       e.date ?? "",
-        status:     state as ScoreEvent["status"],
-        statusText,
-        isLive:     state === "in",
-        matches:    matches.length > 0 ? matches : undefined,
-      };
+    results.push({
+      id:         event.id ?? crypto.randomUUID(),
+      name:       eventName,
+      date:       eventDate,
+      status:     state as ScoreEvent["status"],
+      statusText,
+      isLive:     state === "in",
+      matches:    matches.length > 0 ? matches : undefined,
     });
+  }
+
+  return results;
 }
 
 // ── TheSportsDB normaliser ─────────────────────────────────────────────────
