@@ -9,7 +9,8 @@ export type Category =
   | "Sports"
   | "Environment"
   | "Science & Tech"
-  | "Economy";
+  | "Economy"
+  | "Weather";
 
 export const ALL_CATEGORIES: Category[] = [
   "Politics",
@@ -18,6 +19,7 @@ export const ALL_CATEGORIES: Category[] = [
   "Environment",
   "Science & Tech",
   "Economy",
+  "Weather",
 ];
 
 export const CATEGORY_META: Record<
@@ -85,6 +87,11 @@ export const CATEGORY_META: Record<
       "cancer", "virus", "pandemic", "physics", "astronomy", "telescope",
       "mars", "rocket", "launch", "satellite", "dna", "crispr",
     ],
+  },
+  Weather: {
+    icon: "⛅",
+    short: "WEATHER",
+    keywords: [],
   },
   Economy: {
     icon: "◎",

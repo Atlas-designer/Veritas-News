@@ -19,10 +19,23 @@ import { getUsername } from "@/lib/auth/username";
 import ClusterCard from "./ClusterCard";
 import RecapIntro from "./RecapIntro";
 import ScoresPanel from "./ScoresPanel";
+import WeatherPanel from "./WeatherPanel";
 import { FeedSkeleton } from "./ui/Skeleton";
+import { useWeather } from "@/hooks/useWeather";
 
 type SortMode = "top" | "latest";
 type Region   = "global" | "uk" | "us";
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function britishDate(): string {
+  const d = new Date();
+  return `${ordinal(d.getDate())} ${d.toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`;
+}
 
 const REGION_META: Record<Region, { label: string; flag: string }> = {
   global: { label: "GLOBAL", flag: "🌍" },
@@ -115,6 +128,7 @@ export default function NewsFeed() {
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [activeSport, setActiveSport] = useState<Sport | null>(null);
   const [showScoresView, setShowScoresView] = useState(false);
+  const weather = useWeather();
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
@@ -259,11 +273,7 @@ export default function NewsFeed() {
 
           <div className="flex items-center gap-2 ml-auto">
             <span className="data-readout text-vn-text-dim">
-              {new Date().toLocaleDateString("en-US", {
-                month: "short",
-                day: "2-digit",
-                year: "numeric",
-              })}
+              {britishDate()}
             </span>
 
             {/* Region selector */}
@@ -308,6 +318,19 @@ export default function NewsFeed() {
             {getGreeting()},{" "}
             <span className="text-vn-cyan font-medium capitalize">{username}</span>
           </p>
+        )}
+        {weather.daySummary && (
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-vn-text-dim text-xs font-mono">
+              {weather.currentIcon} {weather.daySummary}
+            </p>
+            <button
+              onClick={() => setActiveCategory("Weather")}
+              className="data-readout text-[9px] text-vn-cyan border border-vn-cyan/40 px-2 py-0.5 rounded-sm hover:bg-vn-cyan/10 transition-all flex-shrink-0"
+            >
+              SEE MORE →
+            </button>
+          </div>
         )}
       </header>
 
@@ -436,8 +459,11 @@ export default function NewsFeed() {
         </div>
       )}
 
-      {/* Sort / Feed — hidden when scores view is open */}
-      {!(activeCategory === "Sports" && showScoresView) && (
+      {/* Weather view */}
+      {activeCategory === "Weather" && <WeatherPanel />}
+
+      {/* Sort / Feed — hidden when scores view is open or weather is active */}
+      {!(activeCategory === "Sports" && showScoresView) && activeCategory !== "Weather" && (
         <>
           {/* Sort + Refresh controls */}
           <div className="flex items-center gap-3 mb-4">

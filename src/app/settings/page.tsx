@@ -7,6 +7,7 @@ import { clearCache } from "@/lib/api/client";
 import { getFlags, setFlag, FeatureFlags } from "@/lib/config/flags";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUsername, clearUsername } from "@/lib/auth/username";
+import { getWeatherPrefs, setWeatherPrefs } from "@/lib/weather/prefs";
 
 const topics = [
   "Politics", "Technology", "Climate", "Economy",
@@ -36,6 +37,10 @@ export default function SettingsPage() {
   const [flags, setFlags] = useState<FeatureFlags>(getFlags());
   const [cacheCleared, setCacheCleared] = useState(false);
   const [username, setUsernameState] = useState<string | null>(null);
+  const [weatherPrefs, setWeatherPrefsState] = useState(() => getWeatherPrefs());
+  const [weatherPostcode, setWeatherPostcode] = useState("");
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [postcodeError, setPostcodeError] = useState(false);
 
   // Read flags + username from localStorage on mount
   useEffect(() => {
@@ -71,6 +76,55 @@ export default function SettingsPage() {
     const next = { ...flags, [key]: newValue };
     setFlags(next);
     syncPrefs({ featureFlags: next });
+  };
+
+  const toggleWeather = () => {
+    const next = { ...weatherPrefs, enabled: !weatherPrefs.enabled };
+    setWeatherPrefs(next);
+    setWeatherPrefsState(next);
+  };
+
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) return;
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const loc = { lat: coords.latitude, lon: coords.longitude, name: "My Location" };
+        const next = { ...weatherPrefs, location: loc };
+        setWeatherPrefs(next);
+        setWeatherPrefsState(next);
+        setGeoLoading(false);
+      },
+      () => setGeoLoading(false)
+    );
+  };
+
+  const handleWeatherPostcode = async () => {
+    setPostcodeError(false);
+    if (!weatherPostcode.trim()) return;
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(weatherPostcode.trim())}&count=1&language=en&format=json`
+      );
+      const json = await res.json();
+      const r = json.results?.[0];
+      if (!r) { setPostcodeError(true); return; }
+      const loc = { lat: r.latitude, lon: r.longitude, name: r.name };
+      const next = { ...weatherPrefs, location: loc };
+      setWeatherPrefs(next);
+      setWeatherPrefsState(next);
+      setWeatherPostcode("");
+      try { sessionStorage.removeItem("vn:weather:data"); } catch {}
+    } catch {
+      setPostcodeError(true);
+    }
+  };
+
+  const clearWeatherLocation = () => {
+    const next = { ...weatherPrefs, location: null };
+    setWeatherPrefs(next);
+    setWeatherPrefsState(next);
+    try { sessionStorage.removeItem("vn:weather:data"); } catch {}
   };
 
   const handleClearCache = async () => {
@@ -117,6 +171,88 @@ export default function SettingsPage() {
               </button>
             </div>
           ))}
+        </div>
+      </HudFrame>
+
+      {/* Weather Options */}
+      <HudFrame title="WEATHER" className="mb-4">
+        <div className="space-y-4">
+          {/* Enable toggle */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <div className="data-readout text-[10px] text-vn-cyan">WEATHER UPDATES</div>
+              <div className="text-[11px] text-vn-text-dim">Show local weather summary on the feed</div>
+            </div>
+            <button
+              onClick={toggleWeather}
+              className={`relative w-10 h-5 rounded-full border transition-all flex-shrink-0 ${
+                weatherPrefs.enabled
+                  ? "border-vn-cyan bg-vn-cyan/20"
+                  : "border-vn-border bg-vn-bg"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
+                  weatherPrefs.enabled
+                    ? "left-[calc(100%-16px)] bg-vn-cyan"
+                    : "left-0.5 bg-vn-text-dim"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Location */}
+          <div>
+            <div className="data-readout text-[10px] text-vn-cyan mb-2">WEATHER REGION</div>
+            {weatherPrefs.location ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-vn-text font-mono">
+                  📍 {weatherPrefs.location.name}
+                </span>
+                <button
+                  onClick={clearWeatherLocation}
+                  className="data-readout text-[10px] text-vn-red hover:opacity-70 transition-opacity"
+                >
+                  CLEAR
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleGeolocate}
+                  disabled={geoLoading}
+                  className="data-readout text-[10px] px-3 py-2 border border-vn-cyan/50 text-vn-cyan rounded-sm hover:bg-vn-cyan/10 transition-all disabled:opacity-50"
+                >
+                  {geoLoading ? "DETECTING..." : "📍 USE MY LOCATION"}
+                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={weatherPostcode}
+                    onChange={(e) => { setWeatherPostcode(e.target.value); setPostcodeError(false); }}
+                    onKeyDown={(e) => e.key === "Enter" && handleWeatherPostcode()}
+                    placeholder="Postcode or city (e.g. SW1A, London)..."
+                    className={`flex-1 bg-vn-panel border rounded-sm px-3 py-1.5 font-mono text-xs text-vn-text placeholder-vn-text-dim/50 focus:outline-none transition-colors ${
+                      postcodeError
+                        ? "border-vn-red/60 focus:border-vn-red"
+                        : "border-vn-border focus:border-vn-cyan/60"
+                    }`}
+                  />
+                  <button
+                    onClick={handleWeatherPostcode}
+                    className="data-readout text-[10px] px-3 py-1.5 border border-vn-border text-vn-text-dim rounded-sm hover:border-vn-cyan/40 hover:text-vn-cyan transition-all"
+                  >
+                    SEARCH
+                  </button>
+                </div>
+                {postcodeError && (
+                  <p className="text-[10px] font-mono text-vn-red">
+                    Location not found — try a different postcode or city name.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </HudFrame>
 
