@@ -38,6 +38,13 @@ export const sourceDatabase: Record<string, Source> = {
     bias: "LEFT_CENTER",
     factualRating: 90,
   },
+  "bylinetimes.com": {
+    id: "bylinetimes",
+    name: "Byline Times",
+    domain: "bylinetimes.com",
+    bias: "LEFT_CENTER",
+    factualRating: 72,
+  },
   "aljazeera.com": {
     id: "aljazeera",
     name: "Al Jazeera",

@@ -32,6 +32,13 @@ const REGION_META: Record<Region, { label: string; flag: string }> = {
 
 const UK_DOMAINS = new Set(SOURCES.filter((s) => s.country === "UK").map((s) => s.domain));
 const US_DOMAINS = new Set(SOURCES.filter((s) => s.country === "US").map((s) => s.domain));
+
+/** Returns the set of domains to pass as "disabled" when in a region mode. */
+function getRegionDisabled(r: Region): Set<string> | undefined {
+  if (r === "global") return undefined;
+  const keep = r === "uk" ? UK_DOMAINS : US_DOMAINS;
+  return new Set(SOURCES.filter((s) => !keep.has(s.domain)).map((s) => s.domain));
+}
 // ── Rolling news ticker ───────────────────────────────────────────────────────
 
 function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
@@ -112,7 +119,7 @@ export default function NewsFeed() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchArticles({ force });
+      const result = await fetchArticles({ force, extraDisabled: getRegionDisabled(region) });
 
       let articles: Article[];
       if (result.usingDemo || result.articles.length === 0) {
@@ -142,7 +149,7 @@ export default function NewsFeed() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [region]);
 
   useEffect(() => {
     load();
@@ -214,11 +221,7 @@ export default function NewsFeed() {
       });
       return !allLowTrust;
     })
-    .filter((c) => {
-      if (region === "global") return true;
-      const domains = region === "uk" ? UK_DOMAINS : US_DOMAINS;
-      return c.sources.some((s) => domains.has(s.domain));
-    });
+;
 
   const handleRecapDone = useCallback(() => {
     setShowRecap(false);

@@ -178,6 +178,15 @@ export const SOURCES: SourceDef[] = [
     rssUrl:        "https://www.telegraph.co.uk/news/rss.xml",
   },
   {
+    domain:        "bylinetimes.com",
+    name:          "Byline Times",
+    bias:          "LEFT_CENTER",
+    country:       "UK",
+    flag:          "🇬🇧",
+    factualRating: 72,
+    rssUrl:        "https://bylinetimes.com/feed/",
+  },
+  {
     domain:        "timesofindia.indiatimes.com",
     name:          "Times of India",
     bias:          "CENTER",

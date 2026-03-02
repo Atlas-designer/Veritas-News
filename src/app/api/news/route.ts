@@ -50,6 +50,8 @@ const RSS_FEEDS: Array<{ url: string; domain: string }> = [
   { url: "https://www.telegraph.co.uk/news/rss.xml",                   domain: "telegraph.co.uk"               },
   // RIGHT
   { url: "https://moxie.foxnews.com/google-publisher/latest.xml",      domain: "foxnews.com"                   },
+  // UK — investigative
+  { url: "https://bylinetimes.com/feed/",                               domain: "bylinetimes.com"               },
   // International
   { url: "https://www.aljazeera.com/xml/rss/all.xml",                  domain: "aljazeera.com"                 },
   { url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms", domain: "timesofindia.indiatimes.com"   },

@@ -29,6 +29,7 @@ export async function fetchArticles(options: {
   category?: string;
   query?: string;
   force?: boolean;
+  extraDisabled?: Set<string>;
 } = {}): Promise<FetchResult> {
   const flags = getFlags();
 
@@ -79,15 +80,18 @@ export async function fetchArticles(options: {
 }
 
 async function fetchWithBackoff(
-  options: { category?: string; query?: string },
+  options: { category?: string; query?: string; extraDisabled?: Set<string> },
   attempt = 0
 ): Promise<Article[]> {
   const params = new URLSearchParams();
   if (options.category) params.set("category", options.category);
   if (options.query) params.set("q", options.query);
 
-  const disabled = getDisabledSources();
-  if (disabled.size > 0) params.set("disabled", Array.from(disabled).join(","));
+  const userDisabled = getDisabledSources();
+  const allDisabled = options.extraDisabled
+    ? new Set([...userDisabled, ...options.extraDisabled])
+    : userDisabled;
+  if (allDisabled.size > 0) params.set("disabled", Array.from(allDisabled).join(","));
 
   const response = await fetch(`/api/news?${params}`);
 
@@ -107,9 +111,10 @@ export async function clearCache(): Promise<void> {
   Object.keys(lastFetch).forEach((k) => delete lastFetch[k]);
 }
 
-function cacheKey(options: { category?: string; query?: string }): string {
-  const disabled = Array.from(getDisabledSources()).sort().join(",");
-  return `articles:${options.category || "top"}:${options.query || ""}:${disabled}`;
+function cacheKey(options: { category?: string; query?: string; extraDisabled?: Set<string> }): string {
+  const userDisabled = Array.from(getDisabledSources()).sort().join(",");
+  const extra = options.extraDisabled ? Array.from(options.extraDisabled).sort().join(",") : "";
+  return `articles:${options.category || "top"}:${options.query || ""}:${userDisabled}:${extra}`;
 }
 
 function sleep(ms: number): Promise<void> {
