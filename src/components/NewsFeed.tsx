@@ -130,7 +130,18 @@ export default function NewsFeed() {
         setUsingDemo(false);
       }
 
-      const built = buildClusters(articles);
+      // Apply any custom trust overrides before scoring so they affect validity calculations
+      const customTrustMap = getCustomTrustScores();
+      const patchedArticles =
+        Object.keys(customTrustMap).length > 0
+          ? articles.map((a) => {
+              const custom = customTrustMap[a.source.domain];
+              if (custom === undefined) return a;
+              return { ...a, source: { ...a.source, factualRating: custom } };
+            })
+          : articles;
+
+      const built = buildClusters(patchedArticles);
       setClusters(built);
       setLastUpdated(new Date());
 
