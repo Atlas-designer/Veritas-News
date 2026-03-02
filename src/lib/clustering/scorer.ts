@@ -82,7 +82,8 @@ export function buildClusters(articles: Article[]): ArticleCluster[] {
       const topic = keywords.join(" · ") || `STORY ${i + 1}`;
 
       // Score articles using their cluster siblings as corroboration
-      const scoredArticles = scoreArticlesInCluster(group);
+      const scoredArticles = scoreArticlesInCluster(group)
+        .sort((a, b) => (b.source.factualRating ?? 0) - (a.source.factualRating ?? 0));
       const clusterScores = scoreCluster(scoredArticles);
 
       const dates = scoredArticles.map((a) => a.publishedAt).sort();
