@@ -19,23 +19,35 @@ interface Props {
   sport: Sport;
 }
 
-export default function ScoresPanel({ sport }: Props) {
-  const [events, setEvents]       = useState<ScoreEvent[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [view, setView]           = useState<ViewMode>("now");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+type TennisTour = "atp" | "wta" | "atp-doubles" | "wta-doubles";
+const TENNIS_TOURS: { id: TennisTour; label: string }[] = [
+  { id: "atp",         label: "MEN'S" },
+  { id: "wta",         label: "WOMEN'S" },
+  { id: "atp-doubles", label: "M. DBL" },
+  { id: "wta-doubles", label: "W. DBL" },
+];
 
+export default function ScoresPanel({ sport }: Props) {
+  const [events, setEvents]         = useState<ScoreEvent[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [view, setView]             = useState<ViewMode>("now");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [tour, setTour]             = useState<TennisTour>("atp");
+
+  const isTennis = sport.id === "atp";
+  const activeSportId = isTennis ? tour : sport.id;
   const liveScoresAvailable = sport.hasLiveScores !== false;
 
   useEffect(() => {
     if (!liveScoresAvailable) { setLoading(false); return; }
     setLoading(true);
     setEvents([]);
+    setExpandedId(null);
     const tab = TABS.find((t) => t.id === view)!;
-    fetchScores(sport.id, tab.days)
+    fetchScores(activeSportId, tab.days)
       .then(setEvents)
       .finally(() => setLoading(false));
-  }, [sport.id, view, liveScoresAvailable]);
+  }, [activeSportId, view, liveScoresAvailable]);
 
   // For historical tabs, everything is a result
   const isHistorical = view !== "now";
@@ -85,6 +97,25 @@ export default function ScoresPanel({ sport }: Props) {
           ))}
         </div>
       </div>
+
+      {/* ── Tennis tour selector ────────────────────────────────── */}
+      {isTennis && (
+        <div className="flex gap-1 px-4 py-2 border-b border-vn-border bg-vn-bg/20">
+          {TENNIS_TOURS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTour(t.id)}
+              className={`data-readout text-[9px] px-2.5 py-1 rounded-sm border transition-all ${
+                tour === t.id
+                  ? "border-vn-orange bg-vn-orange/10 text-vn-orange"
+                  : "border-vn-border text-vn-text-dim hover:border-vn-orange/40"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Body ───────────────────────────────────────────────── */}
       {!liveScoresAvailable ? (
@@ -160,6 +191,17 @@ function renderRow(
   expandedId: string | null,
   setExpandedId: (id: string | null) => void
 ) {
+  // Tennis tournament with drill-down matches
+  if (e.matches !== undefined) {
+    return (
+      <TournamentRow
+        key={e.id}
+        event={e}
+        expanded={expandedId === e.id}
+        onToggle={() => setExpandedId(expandedId === e.id ? null : e.id)}
+      />
+    );
+  }
   if (e.homeRecord !== undefined || e.awayRecord !== undefined) {
     return <BoutRow key={e.id} event={e} />;
   }
@@ -174,6 +216,77 @@ function renderRow(
       expanded={expandedId === e.id}
       onToggle={() => setExpandedId(expandedId === e.id ? null : e.id)}
     />
+  );
+}
+
+// ── Tennis tournament row ──────────────────────────────────────────────────
+
+function TournamentRow({ event, expanded, onToggle }: {
+  event: ScoreEvent;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const matches = event.matches ?? [];
+
+  return (
+    <div className="border-b border-vn-border/30">
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span className="font-mono text-[12px] text-vn-text leading-tight flex-1">
+            {event.name}
+          </span>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`data-readout text-[9px] ${
+              event.isLive ? "text-vn-green" : event.status === "post" ? "text-vn-text-dim" : "text-vn-cyan"
+            }`}>
+              {event.isLive ? `● LIVE` : event.status === "post" ? "FINAL" : formatShortDate(event.date)}
+            </span>
+            {matches.length > 0 && (
+              <span className="data-readout text-[9px] text-vn-text-dim/60">
+                {expanded ? "▴" : "▾"}
+              </span>
+            )}
+          </div>
+        </div>
+        {!expanded && matches.length > 0 && (
+          <p className="data-readout text-[9px] text-vn-text-dim/50 mt-1">
+            {matches.length} match{matches.length !== 1 ? "es" : ""}
+          </p>
+        )}
+      </button>
+
+      {expanded && matches.length > 0 && (
+        <div className="border-t border-vn-border/20 bg-vn-bg/30 divide-y divide-vn-border/20">
+          {matches.map((m) => (
+            <div key={m.id} className="px-4 py-2 flex items-center gap-2">
+              {m.round && (
+                <span className="data-readout text-[8px] text-vn-orange w-10 flex-shrink-0 truncate">
+                  {m.round.toUpperCase()}
+                </span>
+              )}
+              <span className={`font-mono text-[11px] flex-1 text-right truncate ${
+                m.homeWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+              }`}>
+                {m.homeName}
+              </span>
+              <span className={`font-mono text-[12px] font-bold w-16 text-center flex-shrink-0 tabular-nums ${
+                m.isLive ? "text-vn-green" : m.status === "post" ? "text-vn-cyan" : "text-vn-text-dim"
+              }`}>
+                {m.status === "pre" ? "vs" : `${m.homeScore}–${m.awayScore}`}
+              </span>
+              <span className={`font-mono text-[11px] flex-1 truncate ${
+                m.awayWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+              }`}>
+                {m.awayName}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

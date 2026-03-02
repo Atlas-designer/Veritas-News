@@ -18,6 +18,9 @@ const ESPN_ENDPOINTS: Record<string, string> = {
   boxing:           "https://site.api.espn.com/apis/site/v2/sports/boxing/boxing/scoreboard",
   ufc:              "https://site.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
   atp:              "https://site.api.espn.com/apis/site/v2/sports/tennis/atp/scoreboard",
+  wta:              "https://site.api.espn.com/apis/site/v2/sports/tennis/wta/scoreboard",
+  "atp-doubles":    "https://site.api.espn.com/apis/site/v2/sports/tennis/atp-doubles/scoreboard",
+  "wta-doubles":    "https://site.api.espn.com/apis/site/v2/sports/tennis/wta-doubles/scoreboard",
 };
 
 // TheSportsDB free API — sports not on ESPN (snooker, darts)
@@ -45,8 +48,22 @@ export interface ScoreEvent {
   awayRecord?: string;
   homeWinner?: boolean;
   awayWinner?: boolean;
-  // Ranking sports (Golf leaderboard, Tennis standings)
+  // Ranking sports (Golf leaderboard)
   results?: Array<{ pos: number; name: string }>;
+  // Tennis tournaments — all individual matches inside the tournament
+  matches?: Array<{
+    id: string;
+    round?: string;
+    homeName: string;
+    homeScore?: string;
+    homeWinner?: boolean;
+    awayName: string;
+    awayScore?: string;
+    awayWinner?: boolean;
+    status: "pre" | "in" | "post";
+    statusText?: string;
+    isLive?: boolean;
+  }>;
 }
 
 const cache = new Map<string, { data: ScoreEvent[]; ts: number }>();
@@ -126,7 +143,9 @@ export async function GET(request: Request) {
     const events =
       sport === "ufc" || sport === "boxing"
         ? normalizeMMA(raw.events ?? [])
-        : normalizeEvents(raw.events ?? []);
+        : sport === "atp" || sport === "wta" || sport === "atp-doubles" || sport === "wta-doubles"
+          ? normalizeTennis(raw.events ?? [])
+          : normalizeEvents(raw.events ?? []);
 
     cache.set(cacheKey, { data: events, ts: Date.now() });
     return NextResponse.json({ events });
@@ -248,6 +267,56 @@ function normalizeMMA(rawEvents: any[]): ScoreEvent[] {
   }
 
   return bouts.slice(0, 30);
+}
+
+// ── Tennis normaliser ─────────────────────────────────────────────────────
+// ESPN tennis: each event = a tournament; competitions[] = individual matches.
+// We collect all matches into the `matches` field for drill-down in the UI.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeTennis(rawEvents: any[]): ScoreEvent[] {
+  return rawEvents
+    .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
+    .slice(0, 12)
+    .map((e) => {
+      const state      = e.status?.type?.state ?? "pre";
+      const statusText = e.status?.type?.shortDetail ?? e.status?.type?.description ?? "";
+      const competitions: any[] = e.competitions ?? [];
+
+      const matches = competitions
+        .map((comp: any): NonNullable<ScoreEvent["matches"]>[number] | null => {
+          const competitors: any[] = comp.competitors ?? [];
+          if (competitors.length < 2) return null;
+          const home = competitors.find((c: any) => c.homeAway === "home") ?? competitors[0];
+          const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1];
+          const compState  = comp.status?.type?.state ?? state;
+          const hasScores  = compState === "in" || compState === "post";
+          return {
+            id:        comp.id ?? crypto.randomUUID(),
+            round:     comp.type?.text ?? comp.type?.abbreviation ?? "",
+            homeName:  home.athlete?.displayName ?? home.team?.displayName ?? "",
+            homeScore: hasScores ? (home.score ?? "") : "",
+            homeWinner: home.winner ?? false,
+            awayName:  away.athlete?.displayName ?? away.team?.displayName ?? "",
+            awayScore: hasScores ? (away.score ?? "") : "",
+            awayWinner: away.winner ?? false,
+            status:    compState as "pre" | "in" | "post",
+            statusText: comp.status?.type?.shortDetail ?? "",
+            isLive:    compState === "in",
+          };
+        })
+        .filter((m): m is NonNullable<typeof m> => m !== null && (m.homeName !== "" || m.awayName !== ""));
+
+      return {
+        id:         e.id ?? crypto.randomUUID(),
+        name:       e.name ?? "",
+        date:       e.date ?? "",
+        status:     state as ScoreEvent["status"],
+        statusText,
+        isLive:     state === "in",
+        matches:    matches.length > 0 ? matches : undefined,
+      };
+    });
 }
 
 // ── TheSportsDB normaliser ─────────────────────────────────────────────────
