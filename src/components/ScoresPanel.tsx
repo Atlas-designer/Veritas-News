@@ -20,9 +20,10 @@ interface Props {
 }
 
 export default function ScoresPanel({ sport }: Props) {
-  const [events, setEvents]   = useState<ScoreEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [view, setView]       = useState<ViewMode>("now");
+  const [events, setEvents]       = useState<ScoreEvent[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [view, setView]           = useState<ViewMode>("now");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const liveScoresAvailable = sport.hasLiveScores !== false;
 
@@ -117,7 +118,7 @@ export default function ScoresPanel({ sport }: Props) {
           {live.length > 0 && (
             <>
               <SectionHeader title="LIVE NOW" accent="green" />
-              {live.map((e) => renderRow(e))}
+              {live.map((e) => renderRow(e, sport.id, expandedId, setExpandedId))}
             </>
           )}
 
@@ -128,7 +129,7 @@ export default function ScoresPanel({ sport }: Props) {
               {groupByDate(upcoming).map(([dateStr, evs]) => (
                 <div key={dateStr}>
                   <DateBand label={dateStr} />
-                  {evs.map((e) => renderRow(e))}
+                  {evs.map((e) => renderRow(e, sport.id, expandedId, setExpandedId))}
                 </div>
               ))}
             </>
@@ -141,7 +142,7 @@ export default function ScoresPanel({ sport }: Props) {
               {groupByDate(results).map(([dateStr, evs]) => (
                 <div key={dateStr}>
                   <DateBand label={dateStr} />
-                  {evs.map((e) => renderRow(e))}
+                  {evs.map((e) => renderRow(e, sport.id, expandedId, setExpandedId))}
                 </div>
               ))}
             </>
@@ -153,17 +154,27 @@ export default function ScoresPanel({ sport }: Props) {
 }
 
 // Decide which row component to use per event
-function renderRow(e: ScoreEvent) {
-  // Combat sport: has homeRecord or awayRecord set by normalizeMMA
+function renderRow(
+  e: ScoreEvent,
+  sportId: string,
+  expandedId: string | null,
+  setExpandedId: (id: string | null) => void
+) {
   if (e.homeRecord !== undefined || e.awayRecord !== undefined) {
     return <BoutRow key={e.id} event={e} />;
   }
-  // Team sport (has homeTeam)
   if (e.homeTeam) {
     return <MatchRow key={e.id} event={e} />;
   }
-  // Ranking / leaderboard sport
-  return <IndividualEventRow key={e.id} event={e} />;
+  return (
+    <IndividualEventRow
+      key={e.id}
+      event={e}
+      expandable={sportId === "atp"}
+      expanded={expandedId === e.id}
+      onToggle={() => setExpandedId(expandedId === e.id ? null : e.id)}
+    />
+  );
 }
 
 // ── Section chrome ──────────────────────────────────────────────────────────
@@ -376,50 +387,80 @@ function BoutRow({ event }: { event: ScoreEvent }) {
 
 // ── Leaderboard / ranking row (Golf, Tennis) ───────────────────────────────
 
-function IndividualEventRow({ event }: { event: ScoreEvent }) {
-  return (
-    <div className="px-4 py-3 border-b border-vn-border/30 hover:bg-white/[0.02] transition-colors">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <span className="font-mono text-[12px] text-vn-text leading-tight flex-1">
-          {event.name}
-        </span>
+function IndividualEventRow({
+  event,
+  expandable = false,
+  expanded = false,
+  onToggle,
+}: {
+  event: ScoreEvent;
+  expandable?: boolean;
+  expanded?: boolean;
+  onToggle?: () => void;
+}) {
+  const results = event.results ?? [];
+  const preview = results.slice(0, 6);
+
+  const header = (
+    <div className="flex items-start justify-between gap-3 mb-2">
+      <span className="font-mono text-[12px] text-vn-text leading-tight flex-1">
+        {event.name}
+      </span>
+      <div className="flex items-center gap-2 flex-shrink-0">
         <span
-          className={`data-readout text-[9px] flex-shrink-0 ${
-            event.isLive
-              ? "text-vn-green"
-              : event.status === "post"
-                ? "text-vn-text-dim"
-                : "text-vn-cyan"
+          className={`data-readout text-[9px] ${
+            event.isLive ? "text-vn-green" : event.status === "post" ? "text-vn-text-dim" : "text-vn-cyan"
           }`}
         >
-          {event.isLive
-            ? `LIVE · ${event.statusText}`
-            : event.status === "post"
-              ? "FINAL"
-              : formatTime(event.date)}
+          {event.isLive ? `LIVE · ${event.statusText}` : event.status === "post" ? "FINAL" : formatTime(event.date)}
+        </span>
+        {expandable && results.length > 0 && (
+          <span className="data-readout text-[9px] text-vn-text-dim/60">
+            {expanded ? "▴" : "▾"}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderPlayers = (list: typeof results) =>
+    list.map((r, i) => (
+      <div key={r.pos} className="flex items-center gap-3">
+        <span className={`data-readout text-[9px] w-5 text-right flex-shrink-0 ${i === 0 && !expanded ? "text-vn-orange" : "text-vn-text-dim/60"}`}>
+          {r.pos}
+        </span>
+        <div className="w-px h-3 bg-vn-border/50 flex-shrink-0" />
+        <span className={`font-mono text-[12px] ${i === 0 && !expanded ? "text-vn-text font-semibold" : "text-vn-text-dim"}`}>
+          {r.name}
         </span>
       </div>
-      <div className="space-y-1">
-        {(event.results ?? []).map((r, i) => (
-          <div key={r.pos} className="flex items-center gap-3">
-            <span
-              className={`data-readout text-[9px] w-5 text-right flex-shrink-0 ${
-                i === 0 ? "text-vn-orange" : "text-vn-text-dim/60"
-              }`}
-            >
-              {r.pos}
-            </span>
-            <div className="w-px h-3 bg-vn-border/50 flex-shrink-0" />
-            <span
-              className={`font-mono text-[12px] ${
-                i === 0 ? "text-vn-text font-semibold" : "text-vn-text-dim"
-              }`}
-            >
-              {r.name}
-            </span>
+    ));
+
+  if (expandable) {
+    return (
+      <div className="border-b border-vn-border/30">
+        <button
+          onClick={onToggle}
+          className="w-full px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+        >
+          {header}
+          {!expanded && <div className="space-y-1">{renderPlayers(preview)}</div>}
+        </button>
+        {expanded && (
+          <div className="px-4 pb-3 space-y-1.5 border-t border-vn-border/20 bg-vn-bg/30">
+            <div className="space-y-1 pt-2">
+              {renderPlayers(results)}
+            </div>
           </div>
-        ))}
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-3 border-b border-vn-border/30 hover:bg-white/[0.02] transition-colors">
+      {header}
+      <div className="space-y-1">{renderPlayers(preview)}</div>
     </div>
   );
 }

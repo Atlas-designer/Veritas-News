@@ -114,6 +114,7 @@ export default function NewsFeed() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [activeSport, setActiveSport] = useState<Sport | null>(null);
+  const [showScoresView, setShowScoresView] = useState(false);
 
   const load = useCallback(async (force = false) => {
     setLoading(true);
@@ -174,12 +175,14 @@ export default function NewsFeed() {
   const handleCategoryClick = useCallback((cat: Category) => {
     setActiveCategory((prev) => {
       if (prev === cat) {
-        // Deselect — also clear sport if leaving Sports
         setActiveSport(null);
+        setShowScoresView(false);
         return null;
       }
-      // Switching away from Sports → clear sport picker
-      if (cat !== "Sports") setActiveSport(null);
+      if (cat !== "Sports") {
+        setActiveSport(null);
+        setShowScoresView(false);
+      }
       return cat;
     });
   }, []);
@@ -370,7 +373,7 @@ export default function NewsFeed() {
         })}
         {activeCategory && (
           <button
-            onClick={() => { setActiveCategory(null); setActiveSport(null); }}
+            onClick={() => { setActiveCategory(null); setActiveSport(null); setShowScoresView(false); }}
             className="flex-shrink-0 px-3 py-1.5 rounded-sm border border-vn-border text-[10px] font-mono text-vn-text-dim hover:text-vn-red hover:border-vn-red/40 transition-all"
           >
             ✕ ALL
@@ -378,38 +381,63 @@ export default function NewsFeed() {
         )}
       </div>
 
-      {/* Sports sub-picker — visible when Sports category is active */}
-      {activeCategory === "Sports" && (
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 pl-1 border-l-2 border-vn-orange/50 ml-1 scrollbar-hide">
-          {SPORTS.map((sport) => {
-            const isActive = activeSport?.id === sport.id;
-            return (
-              <button
-                key={sport.id}
-                onClick={() => handleSportClick(sport)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-[10px] font-mono tracking-wider transition-all ${
-                  isActive
-                    ? "border-vn-orange bg-vn-orange/15 text-vn-orange"
-                    : "border-vn-border text-vn-text-dim hover:border-vn-orange/40 hover:text-vn-text"
-                }`}
-              >
-                <span>{sport.icon}</span>
-                <span>{sport.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* SCORES hero — visible when Sports active but not in scores view */}
+      {activeCategory === "Sports" && !showScoresView && (
+        <button
+          onClick={() => setShowScoresView(true)}
+          className="w-full mb-4 p-4 border border-vn-orange/40 bg-vn-orange/5 rounded-sm hover:bg-vn-orange/10 hover:border-vn-orange/70 transition-all flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div className="text-left">
+              <div className="data-readout text-[13px] text-vn-orange tracking-widest">SCORES</div>
+              <div className="data-readout text-[9px] text-vn-text-dim mt-0.5">LIVE RESULTS &amp; FIXTURES</div>
+            </div>
+          </div>
+          <span className="data-readout text-[14px] text-vn-text-dim group-hover:text-vn-orange transition-colors">▸</span>
+        </button>
       )}
 
-      {/* Scores panel — shown when a sport is selected */}
-      {activeSport && (
+      {/* Scores view — sport grid or panel */}
+      {activeCategory === "Sports" && showScoresView && (
         <div className="mb-4">
-          <ScoresPanel sport={activeSport} />
+          {activeSport ? (
+            <>
+              <button
+                onClick={() => setActiveSport(null)}
+                className="data-readout text-[10px] text-vn-text-dim hover:text-vn-orange mb-3 flex items-center gap-1.5 transition-colors"
+              >
+                ← BACK TO SPORTS
+              </button>
+              <ScoresPanel sport={activeSport} />
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowScoresView(false)}
+                className="data-readout text-[10px] text-vn-text-dim hover:text-vn-orange mb-4 flex items-center gap-1.5 transition-colors"
+              >
+                ← BACK TO NEWS
+              </button>
+              <div className="grid grid-cols-2 gap-3">
+                {SPORTS.map((sport) => (
+                  <button
+                    key={sport.id}
+                    onClick={() => handleSportClick(sport)}
+                    className="flex flex-col items-center gap-2.5 p-5 border border-vn-border bg-vn-panel rounded-sm hover:border-vn-orange/50 hover:bg-vn-orange/5 transition-all"
+                  >
+                    <span className="text-4xl">{sport.icon}</span>
+                    <span className="data-readout text-[11px] text-vn-text-dim tracking-widest">{sport.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* Sort / Feed / Last updated — hidden when a sport is selected */}
-      {!activeSport && (
+      {/* Sort / Feed — hidden when scores view is open */}
+      {!(activeCategory === "Sports" && showScoresView) && (
         <>
           {/* Sort + Refresh controls */}
           <div className="flex items-center gap-3 mb-4">

@@ -167,7 +167,7 @@ function normalizeEvents(raw: any[]): ScoreEvent[] {
         isLive:     state === "in",
         results:    competitors
           .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
-          .slice(0, 6)
+          .slice(0, 32)
           .map((c) => ({ pos: c.order ?? 0, name: c.athlete?.displayName ?? "" })),
       };
     }
