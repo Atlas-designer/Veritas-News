@@ -360,7 +360,9 @@ function normalizeTennis(rawEvents: any[], sport: string): ScoreEvent[] {
             const away = competitors.find((c: any) => c.homeAway === "away") ?? competitors[1];
             const homeName = getTennisName(home);
             const awayName = getTennisName(away);
-            if (!homeName && !awayName) return [];
+            // Skip placeholder bracket slots where both players are unknown/TBD
+            const isTBD = (n: string) => !n || n === "TBD";
+            if (isTBD(homeName) && isTBD(awayName)) return [];
 
             const compState = comp.status?.type?.state ?? "pre";
             const hasScores = compState === "post" || compState === "in";

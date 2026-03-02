@@ -267,34 +267,39 @@ function TournamentRow({ event, expanded, onToggle }: {
       </button>
 
       {expanded && matches.length > 0 && (
-        <div className="border-t border-vn-border/20 bg-vn-bg/30 divide-y divide-vn-border/20">
-          {matches.map((m) => (
-            <div key={m.id} className="px-3 py-2">
-              {/* Round label */}
-              {m.round && (
-                <p className="data-readout text-[8px] text-vn-orange mb-1 truncate">
-                  {m.round.toUpperCase()}
-                </p>
+        <div className="border-t border-vn-border/20 bg-vn-bg/30">
+          {groupByRound(matches).map(([round, roundMatches]: [string, TennisMatch[]]) => (
+            <div key={round}>
+              {/* Round section header — shown once per round */}
+              {round && (
+                <div className="px-3 py-1 bg-vn-bg/50 border-b border-vn-border/20">
+                  <span className="data-readout text-[8px] text-vn-orange tracking-widest">
+                    {round.toUpperCase()}
+                  </span>
+                </div>
               )}
-              {/* Players + score */}
-              <div className="flex items-center gap-2">
-                <span className={`font-mono text-[11px] flex-1 text-right truncate ${
-                  m.homeWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
-                }`}>
-                  {m.homeName}
-                </span>
-                <span className={`font-mono text-[11px] font-bold flex-shrink-0 tabular-nums text-center min-w-[4.5rem] ${
-                  m.isLive ? "text-vn-green" : m.status === "post" ? "text-vn-cyan" : "text-vn-text-dim"
-                }`}>
-                  {m.status === "pre"
-                    ? "vs"
-                    : formatSetScores(m.homeScore, m.awayScore) || "—"}
-                </span>
-                <span className={`font-mono text-[11px] flex-1 truncate ${
-                  m.awayWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
-                }`}>
-                  {m.awayName}
-                </span>
+              <div className="divide-y divide-vn-border/15">
+                {roundMatches.map((m: TennisMatch) => (
+                  <div key={m.id} className="px-3 py-2 flex items-center gap-2">
+                    <span className={`font-mono text-[11px] flex-1 text-right truncate ${
+                      m.homeWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+                    }`}>
+                      {m.homeName}
+                    </span>
+                    <span className={`font-mono text-[11px] font-bold flex-shrink-0 tabular-nums text-center min-w-[4.5rem] ${
+                      m.isLive ? "text-vn-green" : m.status === "post" ? "text-vn-cyan" : "text-vn-text-dim"
+                    }`}>
+                      {m.status === "pre"
+                        ? "vs"
+                        : formatSetScores(m.homeScore, m.awayScore) || "—"}
+                    </span>
+                    <span className={`font-mono text-[11px] flex-1 truncate ${
+                      m.awayWinner ? "text-vn-text font-bold" : "text-vn-text-dim"
+                    }`}>
+                      {m.awayName}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
@@ -593,6 +598,18 @@ function IndividualEventRow({
 }
 
 // ── Utilities ───────────────────────────────────────────────────────────────
+
+type TennisMatch = NonNullable<ScoreEvent["matches"]>[number];
+
+function groupByRound(matches: TennisMatch[]): [string, TennisMatch[]][] {
+  const groups = new Map<string, TennisMatch[]>();
+  for (const m of matches) {
+    const key = m.round ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(m);
+  }
+  return Array.from(groups.entries());
+}
 
 function groupByDate(events: ScoreEvent[]): [string, ScoreEvent[]][] {
   const groups = new Map<string, ScoreEvent[]>();
