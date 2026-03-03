@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import Groq from "groq-sdk";
 
-const client = new Anthropic(); // reads ANTHROPIC_API_KEY from env automatically
+const client = new Groq(); // reads GROQ_API_KEY from env automatically
 
 interface ClusterSummary {
   topic: string;
@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     .join("\n\n");
 
   try {
-    const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+    const completion = await client.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
       max_tokens: 600,
       messages: [
         {
@@ -53,15 +53,14 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    const text =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    const text = completion.choices[0]?.message?.content ?? "";
 
     cached = { text, generatedAt: new Date().toISOString() };
     cachedAt = Date.now();
 
     return NextResponse.json(cached);
   } catch (err) {
-    console.error("[briefing] Claude API error:", err);
+    console.error("[briefing] Groq API error:", err);
     return NextResponse.json(
       { error: "Failed to generate briefing" },
       { status: 500 }
