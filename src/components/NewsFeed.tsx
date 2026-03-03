@@ -20,6 +20,7 @@ import ClusterCard from "./ClusterCard";
 import RecapIntro from "./RecapIntro";
 import ScoresPanel from "./ScoresPanel";
 import WeatherPanel from "./WeatherPanel";
+import BriefingPanel from "./BriefingPanel";
 import { FeedSkeleton } from "./ui/Skeleton";
 import { useWeather } from "@/hooks/useWeather";
 
@@ -54,7 +55,7 @@ function getRegionDisabled(r: Region): Set<string> | undefined {
 }
 // ── Rolling news ticker ───────────────────────────────────────────────────────
 
-function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
+function NewsTicker({ clusters, onLiveClick }: { clusters: ArticleCluster[]; onLiveClick: () => void }) {
   // Take up to 15 clusters sorted newest first; mark breaking ones
   const items = [...clusters]
     .sort((a, b) => (b.lastUpdated ?? "").localeCompare(a.lastUpdated ?? ""))
@@ -78,10 +79,13 @@ function NewsTicker({ clusters }: { clusters: ArticleCluster[] }) {
 
   return (
     <div className="overflow-hidden border border-vn-border bg-vn-panel rounded-sm mb-6 flex items-stretch h-9">
-      {/* Label */}
-      <div className="flex-shrink-0 px-3 border-r border-vn-border bg-vn-red/10 flex items-center">
-        <span className="data-readout text-[9px] text-vn-red tracking-widest">LIVE</span>
-      </div>
+      {/* Label — click to open AI briefing */}
+      <button
+        onClick={onLiveClick}
+        className="flex-shrink-0 px-3 border-r border-vn-border bg-vn-red/10 flex items-center hover:bg-vn-red/25 transition-colors group"
+      >
+        <span className="data-readout text-[9px] text-vn-red tracking-widest group-hover:text-glow-red">LIVE</span>
+      </button>
 
       {/* Scrolling text */}
       <div className="overflow-hidden flex-1 flex items-center">
@@ -110,6 +114,7 @@ export default function NewsFeed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingDemo, setUsingDemo] = useState(false);
+  const [showBriefing, setShowBriefing] = useState(false);
   const [region, setRegion] = useState<Region>(() =>
     typeof window !== "undefined"
       ? ((localStorage.getItem("vn:region") as Region) ?? "global")
@@ -355,7 +360,12 @@ export default function NewsFeed() {
 
       {/* Rolling news ticker */}
       {!loading && clusters.length > 0 && (
-        <NewsTicker clusters={clusters} />
+        <NewsTicker clusters={clusters} onLiveClick={() => setShowBriefing(true)} />
+      )}
+
+      {/* AI Briefing overlay */}
+      {showBriefing && (
+        <BriefingPanel clusters={clusters} onClose={() => setShowBriefing(false)} />
       )}
 
       {/* Search */}
