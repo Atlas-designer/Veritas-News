@@ -175,7 +175,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
   const titleNode = (
     <span className="flex items-center gap-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/robot.gif" alt="" className="w-5 h-5 object-contain inline-block" />
+      <img src="/robot.GIF" alt="" className="w-5 h-5 object-contain inline-block" />
       AI DAILY BRIEFING
     </span>
   );
@@ -219,7 +219,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/robot.gif"
+                    src="/robot.GIF"
                     alt="Play briefing"
                     className={`w-8 h-8 object-contain transition-all ${
                       speaking
