@@ -3,7 +3,7 @@ import clsx from "clsx";
 
 interface HudFrameProps {
   children: ReactNode;
-  title?: string;
+  title?: ReactNode;
   variant?: "default" | "alert" | "success";
   className?: string;
 }
