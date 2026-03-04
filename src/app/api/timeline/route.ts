@@ -3,7 +3,7 @@ import Groq from "groq-sdk";
 
 const client = new Groq();
 
-export interface TimelineEvent {
+interface TimelineEvent {
   date: string;
   headline: string;
   description: string;

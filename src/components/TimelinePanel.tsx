@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import HudFrame from "@/components/ui/HudFrame";
 import { Article, ArticleCluster } from "@/types";
-import { TimelineEvent } from "@/app/api/timeline/route";
+
+interface TimelineEvent {
+  date: string;
+  headline: string;
+  description: string;
+}
 
 interface Props {
   article: { id: string; title: string; summary: string; cluster?: ArticleCluster };
