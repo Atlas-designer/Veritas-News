@@ -102,8 +102,13 @@ export default function ArticlePage({ params }: { params: { id: string } }) {
         </HudFrame>
       )}
 
-      {/* External link + timeline */}
-      <div className="mt-4 pb-4 flex flex-wrap gap-3 items-center">
+      {/* Timeline button */}
+      <div className="mt-4">
+        <TimelineButton article={article} />
+      </div>
+
+      {/* External link */}
+      <div className="mt-4 pb-4">
         <a
           href={article.url}
           target="_blank"
@@ -112,7 +117,6 @@ export default function ArticlePage({ params }: { params: { id: string } }) {
         >
           READ ORIGINAL SOURCE ↗
         </a>
-        <TimelineButton article={article} />
       </div>
     </div>
   );
