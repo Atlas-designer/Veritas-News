@@ -7,6 +7,7 @@ import { fetchArticles } from "@/lib/api/client";
 import { buildClusters } from "@/lib/clustering/scorer";
 import { mockArticles } from "@/lib/mock/data";
 import HudFrame from "@/components/ui/HudFrame";
+import TimelineButton from "@/components/TimelineButton";
 import TrustMeter from "@/components/ui/TrustMeter";
 import ArticleCard from "@/components/ArticleCard";
 import SourceBadge from "@/components/SourceBadge";
@@ -194,6 +195,15 @@ export default function ClusterPage() {
           ))}
         </div>
       </HudFrame>
+
+      {/* Timeline button */}
+      {cluster.articles.length > 0 && (
+        <div className="mb-4">
+          <TimelineButton
+            article={{ ...cluster.articles[0], cluster }}
+          />
+        </div>
+      )}
 
       {/* Articles in cluster */}
       <div className="space-y-3">
