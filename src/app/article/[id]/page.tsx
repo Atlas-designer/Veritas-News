@@ -3,6 +3,7 @@ import TrustMeter from "@/components/ui/TrustMeter";
 import SourceBadge from "@/components/SourceBadge";
 import SentimentBar from "@/components/SentimentBar";
 import WhyThisScore from "@/components/WhyThisScore";
+import TimelineButton from "@/components/TimelineButton";
 import { mockArticles } from "@/lib/mock/data";
 import { calculateValidity } from "@/lib/scoring/engine";
 import Link from "next/link";
@@ -101,8 +102,8 @@ export default function ArticlePage({ params }: { params: { id: string } }) {
         </HudFrame>
       )}
 
-      {/* External link */}
-      <div className="mt-4 pb-4">
+      {/* External link + timeline */}
+      <div className="mt-4 pb-4 flex flex-wrap gap-3 items-center">
         <a
           href={article.url}
           target="_blank"
@@ -111,6 +112,7 @@ export default function ArticlePage({ params }: { params: { id: string } }) {
         >
           READ ORIGINAL SOURCE ↗
         </a>
+        <TimelineButton article={article} />
       </div>
     </div>
   );
