@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Server-side audio cache — keyed by text hash, 1h TTL
-let cachedAudio: Buffer | null = null;
+let cachedAudio: ArrayBuffer | null = null;
 let cachedText = "";
 let cachedAt = 0;
 const CACHE_TTL = 60 * 60 * 1000;
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     const contentType = response.headers.get("content-type") ?? "audio/flac";
-    const audioBuffer = Buffer.from(await response.arrayBuffer());
+    const audioBuffer = await response.arrayBuffer();
 
     cachedAudio = audioBuffer;
     cachedText = text;
