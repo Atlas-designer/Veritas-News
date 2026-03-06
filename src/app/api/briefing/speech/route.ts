@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits",
+      "https://router.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits",
       {
         method: "POST",
         headers: {
