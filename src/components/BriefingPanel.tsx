@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import HudFrame from "@/components/ui/HudFrame";
 import { ArticleCluster } from "@/types";
 
@@ -11,33 +11,6 @@ interface Props {
 
 const CLIENT_TTL = 60 * 60 * 1000;
 
-interface WordToken {
-  word: string;
-  start: number;
-  end: number;
-}
-
-// Split briefing text into paragraphs of word tokens with absolute char positions
-function tokenize(text: string): WordToken[][] {
-  const paras = text.split("\n\n").filter(Boolean);
-  let searchFrom = 0;
-  return paras.map((para) => {
-    const paraStart = text.indexOf(para, searchFrom);
-    searchFrom = paraStart + para.length;
-    const tokens: WordToken[] = [];
-    const re = /\S+/g;
-    let m;
-    while ((m = re.exec(para)) !== null) {
-      tokens.push({
-        word: m[0],
-        start: paraStart + m.index,
-        end: paraStart + m.index + m[0].length,
-      });
-    }
-    return tokens;
-  });
-}
-
 export default function BriefingPanel({ clusters, onClose }: Props) {
   const [text, setText] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
@@ -46,16 +19,17 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
 
   // TTS state
   const [speaking, setSpeaking] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
   const [ttsRate, setTtsRate] = useState(1);
-  const [currentCharIdx, setCurrentCharIdx] = useState(-1);
-  const currentCharIdxRef = useRef(-1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
   const ttsRateRef = useRef(1);
 
   // Hold detection
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didHoldRef = useRef(false);
 
-  // Fetch briefing
+  // Fetch briefing text
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("vn:briefing");
@@ -98,56 +72,79 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cancel TTS on unmount
+  // Cleanup audio on unmount
   useEffect(() => {
-    return () => { window.speechSynthesis?.cancel(); };
+    return () => {
+      audioRef.current?.pause();
+      if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+    };
   }, []);
 
-  const startSpeech = useCallback((charOffset: number, rate: number, fullText: string) => {
-    window.speechSynthesis.cancel();
-    const slice = fullText.slice(charOffset);
-    const utterance = new SpeechSynthesisUtterance(slice);
-    utterance.rate = rate;
-    utterance.onboundary = (e) => {
-      if (e.name === "word") {
-        const abs = charOffset + e.charIndex;
-        currentCharIdxRef.current = abs;
-        setCurrentCharIdx(abs);
+  async function playAudio() {
+    if (!text) return;
+
+    // Reuse existing audio element if already loaded
+    if (audioRef.current && blobUrlRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.playbackRate = ttsRateRef.current;
+      audioRef.current.play();
+      setSpeaking(true);
+      return;
+    }
+
+    setAudioLoading(true);
+    try {
+      const res = await fetch("/api/briefing/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 503) {
+          const wait = (data as { retryAfter?: number }).retryAfter ?? 20;
+          setError(true);
+          console.warn(`[speech] Model loading, retry in ${wait}s`);
+        } else {
+          setError(true);
+        }
+        return;
       }
-    };
-    utterance.onend = () => {
-      setSpeaking(false);
-      setCurrentCharIdx(-1);
-      currentCharIdxRef.current = -1;
-      setTtsRate(1);
-      ttsRateRef.current = 1;
-    };
-    window.speechSynthesis.speak(utterance);
-    setSpeaking(true);
-  }, []);
 
-  const stopSpeech = useCallback(() => {
-    window.speechSynthesis?.cancel();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      blobUrlRef.current = url;
+
+      const audio = new Audio(url);
+      audio.playbackRate = ttsRateRef.current;
+      audio.onended = () => setSpeaking(false);
+      audio.onpause = () => setSpeaking(false);
+      audio.onplay = () => setSpeaking(true);
+      audioRef.current = audio;
+      audio.play();
+    } catch {
+      setError(true);
+    } finally {
+      setAudioLoading(false);
+    }
+  }
+
+  function stopAudio() {
+    audioRef.current?.pause();
     setSpeaking(false);
-    setCurrentCharIdx(-1);
-    currentCharIdxRef.current = -1;
-    setTtsRate(1);
-    ttsRateRef.current = 1;
-  }, []);
+  }
 
-  // Short press = play/stop; hold (600ms) = toggle 2× speed
+  // Short press = play/stop; hold 600ms = toggle 2× speed
   const handleRobotPointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     didHoldRef.current = false;
     holdTimerRef.current = setTimeout(() => {
       didHoldRef.current = true;
-      if (!text) return;
       const newRate = ttsRateRef.current === 1 ? 2 : 1;
       ttsRateRef.current = newRate;
       setTtsRate(newRate);
-      if (speaking) {
-        startSpeech(Math.max(0, currentCharIdxRef.current), newRate, text);
-      }
+      if (audioRef.current) audioRef.current.playbackRate = newRate;
     }, 600);
   };
 
@@ -156,21 +153,19 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     if (!didHoldRef.current) {
       if (speaking) {
-        stopSpeech();
-      } else if (text) {
-        startSpeech(0, ttsRateRef.current, text);
+        stopAudio();
+      } else {
+        playAudio();
       }
     }
     didHoldRef.current = false;
   };
 
-  // Click body to close — browser won't fire onClick during a scroll/drag
+  // Click body to close
   const handleBodyClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button")) return;
     onClose();
   };
-
-  const parsedWords = text ? tokenize(text) : null;
 
   const titleNode = (
     <span className="flex items-center gap-2">
@@ -200,7 +195,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
                 : ""}
             </span>
             <div className="flex items-center gap-3">
-              {/* Robot TTS button — press to play/stop, hold for 2× */}
+              {/* Robot TTS button */}
               {!loading && text && (
                 <button
                   onPointerDown={handleRobotPointerDown}
@@ -209,8 +204,11 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
                     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
                   }}
                   className="relative select-none"
+                  disabled={audioLoading}
                   title={
-                    speaking
+                    audioLoading
+                      ? "Loading voice..."
+                      : speaking
                       ? ttsRate === 2
                         ? "2× speed · press to stop"
                         : "Press to stop · hold for 2×"
@@ -222,7 +220,9 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
                     src="/robot.GIF"
                     alt="Play briefing"
                     className={`w-8 h-8 object-contain transition-all ${
-                      speaking
+                      audioLoading
+                        ? "opacity-40 animate-pulse"
+                        : speaking
                         ? "drop-shadow-[0_0_8px_rgba(0,255,200,0.9)]"
                         : "opacity-60 hover:opacity-100"
                     }`}
@@ -231,6 +231,11 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
                   {speaking && (
                     <span className="absolute -top-1 -right-1 text-[8px] font-mono font-bold text-vn-cyan leading-none">
                       {ttsRate === 2 ? "2×" : "▶"}
+                    </span>
+                  )}
+                  {audioLoading && (
+                    <span className="absolute -top-1 -right-1 text-[8px] font-mono text-vn-text-dim leading-none">
+                      ···
                     </span>
                   )}
                 </button>
@@ -258,28 +263,20 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
 
           {/* Error */}
           {!loading && error && (
-            <p className="text-xs text-vn-red font-mono py-4">
-              Failed to generate briefing. Ensure GROQ_API_KEY is set in your environment.
+            <p className="text-xs text-vn-red font-mono py-2">
+              Voice unavailable — model may still be loading. Try again in 20s.
             </p>
           )}
 
-          {/* Briefing text — click to close, words highlighted while speaking */}
-          {!loading && parsedWords && (
+          {/* Briefing text — click to close */}
+          {!loading && text && (
             <div
               className="space-y-4 cursor-pointer select-none"
               onClick={handleBodyClick}
             >
-              {parsedWords.map((words, pi) => (
-                <p key={pi} className="text-[11px] text-vn-text font-mono leading-relaxed">
-                  {words.map((token, wi) => {
-                    const isActive =
-                      currentCharIdx >= token.start && currentCharIdx < token.end;
-                    return (
-                      <span key={wi} className={isActive ? "text-green-400" : ""}>
-                        {token.word}{" "}
-                      </span>
-                    );
-                  })}
+              {text.split("\n\n").filter(Boolean).map((para, i) => (
+                <p key={i} className="text-[11px] text-vn-text font-mono leading-relaxed">
+                  {para}
                 </p>
               ))}
             </div>
