@@ -94,13 +94,15 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
 
     setAudioLoading(true);
     try {
-      // Call StreamElements TTS directly from the browser (no API key needed)
-      const truncated = text.slice(0, 1500);
-      const ttsUrl = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(truncated)}`;
-      const res = await fetch(ttsUrl);
+      const res = await fetch("/api/briefing/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
 
       if (!res.ok) {
-        setError("Voice unavailable — try again later");
+        const data = await res.json().catch(() => ({}));
+        setError((data as { error?: string }).error ?? "Voice unavailable");
         return;
       }
 
