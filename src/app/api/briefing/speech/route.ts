@@ -18,8 +18,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No text provided" }, { status: 400 });
   }
 
+  // LJSpeech VITS has a practical limit — truncate to avoid model errors
+  const truncated = text.slice(0, 1000);
+
   // Serve cached audio if same text and still fresh
-  if (cachedAudio && cachedText === text && Date.now() - cachedAt < CACHE_TTL) {
+  if (cachedAudio && cachedText === truncated && Date.now() - cachedAt < CACHE_TTL) {
     return new NextResponse(cachedAudio, {
       headers: { "Content-Type": "audio/flac", "Cache-Control": "no-store" },
     });
@@ -32,14 +35,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await fetch(
-      "https://router.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits",
+      "https://router.huggingface.co/hf-inference/models/espnet/kan-bayashi_ljspeech_vits",
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${hfToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ inputs: text }),
+        body: JSON.stringify({ inputs: truncated }),
       }
     );
 
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
     const audioBuffer = await response.arrayBuffer();
 
     cachedAudio = audioBuffer;
-    cachedText = text;
+    cachedText = truncated;
     cachedAt = Date.now();
 
     return new NextResponse(audioBuffer, {
