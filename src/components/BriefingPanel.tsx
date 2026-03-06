@@ -15,7 +15,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
   const [text, setText] = useState<string | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // TTS state
   const [speaking, setSpeaking] = useState(false);
@@ -58,7 +58,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data.error) { setError(true); return; }
+        if (data.error) { setError(data.error); return; }
         setText(data.text);
         setGeneratedAt(data.generatedAt);
         try {
@@ -68,7 +68,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
           );
         } catch {}
       })
-      .catch(() => setError(true))
+      .catch(() => setError("Failed to generate briefing"))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -104,10 +104,9 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 503) {
           const wait = (data as { retryAfter?: number }).retryAfter ?? 20;
-          setError(true);
-          console.warn(`[speech] Model loading, retry in ${wait}s`);
+          setError(`Voice model loading — try again in ${wait}s`);
         } else {
-          setError(true);
+          setError((data as { error?: string }).error ?? "Voice unavailable");
         }
         return;
       }
@@ -123,8 +122,8 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
       audio.onplay = () => setSpeaking(true);
       audioRef.current = audio;
       audio.play();
-    } catch {
-      setError(true);
+    } catch (e) {
+      setError(String(e));
     } finally {
       setAudioLoading(false);
     }
@@ -264,7 +263,7 @@ export default function BriefingPanel({ clusters, onClose }: Props) {
           {/* Error */}
           {!loading && error && (
             <p className="text-xs text-vn-red font-mono py-2">
-              Voice unavailable — model may still be loading. Try again in 20s.
+              {error}
             </p>
           )}
 

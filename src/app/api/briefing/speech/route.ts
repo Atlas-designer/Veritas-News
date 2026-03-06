@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/facebook/mms-tts-eng",
+      "https://api-inference.huggingface.co/models/espnet/kan-bayashi_ljspeech_vits",
       {
         method: "POST",
         headers: {
@@ -44,14 +44,20 @@ export async function POST(req: NextRequest) {
     );
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      // Model still loading — tell client to retry
+      const rawErr = await response.text().catch(() => "");
+      let errJson: Record<string, unknown> = {};
+      try { errJson = JSON.parse(rawErr); } catch { /* not JSON */ }
+
+      console.error("[speech] HF error:", response.status, rawErr);
+
       if (response.status === 503) {
-        const wait = (err as { estimated_time?: number }).estimated_time ?? 20;
+        const wait = (errJson.estimated_time as number) ?? 20;
         return NextResponse.json({ error: "loading", retryAfter: Math.ceil(wait) }, { status: 503 });
       }
-      console.error("[speech] HF error:", response.status, err);
-      return NextResponse.json({ error: "TTS generation failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: `TTS failed: ${response.status} — ${rawErr.slice(0, 200)}` },
+        { status: 500 }
+      );
     }
 
     const contentType = response.headers.get("content-type") ?? "audio/flac";
@@ -66,6 +72,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[speech] fetch error:", err);
-    return NextResponse.json({ error: "TTS generation failed" }, { status: 500 });
+    return NextResponse.json({ error: `TTS fetch error: ${String(err)}` }, { status: 500 });
   }
 }
