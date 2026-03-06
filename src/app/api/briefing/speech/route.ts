@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   // Serve cached audio if same text and still fresh
   if (cachedAudio && cachedText === truncated && Date.now() - cachedAt < CACHE_TTL) {
     return new NextResponse(cachedAudio, {
-      headers: { "Content-Type": "audio/flac", "Cache-Control": "no-store" },
+      headers: { "Content-Type": "audio/wav", "Cache-Control": "no-store" },
     });
   }
 
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/espnet/kan-bayashi_ljspeech_vits",
+      "https://router.huggingface.co/hf-inference/models/facebook/mms-tts-eng",
       {
         method: "POST",
         headers: {
