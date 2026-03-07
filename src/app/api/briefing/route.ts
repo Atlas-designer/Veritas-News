@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `You are a news briefing assistant for Veritas News. Based on today's top stories below, write a concise daily briefing in a calm, professional journalistic style — like a radio news bulletin. Write 3-4 short paragraphs in flowing prose. No markdown, no bullet points, no headers. Be factual, neutral, and concise. Cover the most significant stories.\n\nTop stories today:\n\n${storiesList}`,
+          content: `You are a news briefing assistant for Veritas News. Based on today's top stories below, write a concise daily briefing in a calm, professional journalistic style — like a radio news bulletin. Begin with exactly this sentence: "Welcome to Veritas News. Here's a summary of some of the top articles happening around the globe today." Then write 3-4 short paragraphs in flowing prose. No markdown, no bullet points, no headers. Be factual, neutral, and concise. Cover the most significant stories.\n\nTop stories today:\n\n${storiesList}`,
         },
       ],
     });
