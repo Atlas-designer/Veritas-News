@@ -165,14 +165,20 @@ export default function ClusterPage() {
         {summaryArticles.length > 0 ? (
           <div className="space-y-4">
             {summaryArticles.map((article) => (
-              <div key={article.id}>
-                <p className="text-sm text-vn-text leading-relaxed">
+              <a
+                key={article.id}
+                href={article.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block group cursor-pointer"
+              >
+                <p className="text-sm text-vn-text leading-relaxed group-hover:text-vn-cyan transition-colors">
                   {article.summary}
                 </p>
-                <p className="data-readout text-[9px] text-vn-text-dim mt-1.5">
-                  VIA {article.source.name.toUpperCase()} · {getTimeAgo(article.publishedAt)}
+                <p className="data-readout text-[9px] text-vn-text-dim mt-1.5 group-hover:text-vn-cyan/70 transition-colors">
+                  VIA {article.source.name.toUpperCase()} · {getTimeAgo(article.publishedAt)} ↗
                 </p>
-              </div>
+              </a>
             ))}
           </div>
         ) : (
