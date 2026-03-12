@@ -23,35 +23,35 @@ export async function GET() {
 
   try {
     const today = new Date().toISOString().split("T")[0];
-    const maxDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+    const maxDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0];
 
-    // Fetch up to 3 pages of upcoming movies
+    // Use discover/movie with date range — covers full year ahead
+    // Fetch up to 5 pages (100 movies)
     const pages = await Promise.all(
-      [1, 2, 3].map((page) =>
+      [1, 2, 3, 4, 5].map((page) =>
         fetch(
-          `https://api.themoviedb.org/3/movie/upcoming?api_key=${apiKey}&language=en-US&region=GB&page=${page}`
+          `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}` +
+          `&sort_by=primary_release_date.asc` +
+          `&primary_release_date.gte=${today}` +
+          `&primary_release_date.lte=${maxDate}` +
+          `&with_release_type=2|3` +
+          `&language=en-US&region=GB&page=${page}`
         ).then((r) => r.json())
       )
     );
 
     const all: MovieSummary[] = pages
       .flatMap((p) => p.results ?? [])
-      .filter(
-        (m: { release_date?: string }) =>
-          m.release_date && m.release_date >= today && m.release_date <= maxDate
-      )
+      .filter((m: { release_date?: string }) => m.release_date)
       .map((m: { id: number; title: string; release_date: string; poster_path: string; overview: string }) => ({
         id: m.id,
         title: m.title,
         releaseDate: m.release_date,
         posterPath: m.poster_path ?? "",
         overview: m.overview ?? "",
-      }))
-      .sort((a: MovieSummary, b: MovieSummary) =>
-        a.releaseDate.localeCompare(b.releaseDate)
-      );
+      }));
 
     // Deduplicate by id
     const seen = new Set<number>();
