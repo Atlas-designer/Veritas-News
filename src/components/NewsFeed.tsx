@@ -20,6 +20,7 @@ import ClusterCard from "./ClusterCard";
 import RecapIntro from "./RecapIntro";
 import ScoresPanel from "./ScoresPanel";
 import WeatherPanel from "./WeatherPanel";
+import MoviesPanel from "./MoviesPanel";
 import BriefingPanel from "./BriefingPanel";
 import { FeedSkeleton } from "./ui/Skeleton";
 import { useWeather } from "@/hooks/useWeather";
@@ -469,6 +470,9 @@ export default function NewsFeed() {
 
       {/* Weather view */}
       {activeCategory === "Weather" && <WeatherPanel />}
+
+      {/* Movies view */}
+      {activeCategory === "Movies" && <MoviesPanel />}
 
       {/* Sort / Feed — hidden when scores view is open or weather is active */}
       {!(activeCategory === "Sports" && showScoresView) && activeCategory !== "Weather" && (

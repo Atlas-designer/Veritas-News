@@ -10,7 +10,8 @@ export type Category =
   | "Environment"
   | "Science & Tech"
   | "Economy"
-  | "Weather";
+  | "Weather"
+  | "Movies";
 
 export const ALL_CATEGORIES: Category[] = [
   "Politics",
@@ -20,6 +21,7 @@ export const ALL_CATEGORIES: Category[] = [
   "Science & Tech",
   "Economy",
   "Weather",
+  "Movies",
 ];
 
 export const CATEGORY_META: Record<
@@ -91,6 +93,11 @@ export const CATEGORY_META: Record<
   Weather: {
     icon: "⛅",
     short: "WEATHER",
+    keywords: [],
+  },
+  Movies: {
+    icon: "🎬",
+    short: "MOVIES",
     keywords: [],
   },
   Economy: {
