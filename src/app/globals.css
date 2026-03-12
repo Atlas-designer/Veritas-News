@@ -15,6 +15,42 @@
   --vn-green:  #5fb85f;
 }
 
+/* ── Light mode overrides ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --vn-bg:     #f5f2ee;
+  --vn-panel:  #e8e5e0;
+  --vn-border: #ccc9c0;
+}
+
+[data-theme="light"] body {
+  color: #1a1a1a;
+}
+
+/* Background class overrides (Tailwind hardcodes hex, so we need explicit rules) */
+[data-theme="light"] .bg-vn-bg           { background-color: #f5f2ee !important; }
+[data-theme="light"] .bg-vn-panel        { background-color: #e8e5e0 !important; }
+[data-theme="light"] .bg-vn-panel\/50    { background-color: rgba(232,229,224,0.5) !important; }
+[data-theme="light"] .bg-vn-border       { background-color: #ccc9c0 !important; }
+
+/* Text class overrides */
+[data-theme="light"] .text-vn-text       { color: #1a1a1a !important; }
+[data-theme="light"] .text-vn-text-dim   { color: #5a5650 !important; }
+
+/* Border class overrides */
+[data-theme="light"] .border-vn-border   { border-color: #ccc9c0 !important; }
+
+/* Input backgrounds */
+[data-theme="light"] input[class*="bg-vn-panel"] { background-color: #e8e5e0 !important; }
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track { background: #f5f2ee; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: #ccc9c0; }
+
+/* Map popup */
+[data-theme="light"] .vn-map-popup         { background: #e8e5e0; border-color: #ccc9c0; }
+[data-theme="light"] .vn-map-popup__topic  { color: #1a1a1a; }
+[data-theme="light"] .vn-map-popup__sources { color: #5a5650; }
+
 /* ── Region themes ──────────────────────────────────────────────────────── */
 [data-region="uk"] { --vn-cyan: #CF142B; }
 [data-region="us"] { --vn-cyan: #2D62A3; }

@@ -15,10 +15,18 @@ import GuidedDemo from "./GuidedDemo";
 import { getUsername, setUsername } from "@/lib/auth/username";
 
 const DEMO_KEY = "vn:demo-shown";
+const THEME_KEY = "vn:theme";
 
 export default function Providers({ children }: { children: ReactNode }) {
   const [username, setUsernameState] = useState<string | null | undefined>(undefined);
   const [showDemo, setShowDemo] = useState(false);
+
+  // On mount: apply saved theme before first paint
+  useEffect(() => {
+    if (localStorage.getItem(THEME_KEY) === "light") {
+      document.documentElement.dataset.theme = "light";
+    }
+  }, []);
 
   // On mount: check for existing session
   useEffect(() => {

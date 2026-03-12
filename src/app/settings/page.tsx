@@ -41,12 +41,26 @@ export default function SettingsPage() {
   const [weatherPostcode, setWeatherPostcode] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [postcodeError, setPostcodeError] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
 
-  // Read flags + username from localStorage on mount
+  // Read flags + username + theme from localStorage on mount
   useEffect(() => {
     setFlags(getFlags());
     setUsernameState(getUsername());
+    setLightMode(localStorage.getItem("vn:theme") === "light");
   }, []);
+
+  const toggleLightMode = () => {
+    const next = !lightMode;
+    setLightMode(next);
+    if (next) {
+      localStorage.setItem("vn:theme", "light");
+      document.documentElement.dataset.theme = "light";
+    } else {
+      localStorage.removeItem("vn:theme");
+      delete document.documentElement.dataset.theme;
+    }
+  };
 
   const handleSignOut = () => {
     clearUsername();
@@ -143,6 +157,32 @@ export default function SettingsPage() {
           Customize your news intelligence feed
         </p>
       </header>
+
+      {/* Display */}
+      <HudFrame title="DISPLAY" className="mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="data-readout text-[10px] text-vn-cyan">LIGHT MODE</div>
+            <div className="text-[11px] text-vn-text-dim">Switch to a light colour scheme</div>
+          </div>
+          <button
+            onClick={toggleLightMode}
+            className={`relative w-10 h-5 rounded-full border transition-all flex-shrink-0 ${
+              lightMode
+                ? "border-vn-cyan bg-vn-cyan/20"
+                : "border-vn-border bg-vn-bg"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
+                lightMode
+                  ? "left-[calc(100%-16px)] bg-vn-cyan"
+                  : "left-0.5 bg-vn-text-dim"
+              }`}
+            />
+          </button>
+        </div>
+      </HudFrame>
 
       {/* Feature Flags */}
       <HudFrame title="FEATURE FLAGS" className="mb-4">
