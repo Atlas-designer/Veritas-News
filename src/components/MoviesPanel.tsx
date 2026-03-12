@@ -216,7 +216,7 @@ export default function MoviesPanel() {
 
       {/* Loading skeletons */}
       {loading && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 mt-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-vn-panel border border-vn-border rounded-sm aspect-[2/3] animate-pulse" />
           ))}
@@ -243,7 +243,7 @@ export default function MoviesPanel() {
       {/* Movie grid */}
       {!loading && !error && visible.length > 0 && (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 mt-2">
             {visible.map((movie) => (
               <button
                 key={movie.id}
