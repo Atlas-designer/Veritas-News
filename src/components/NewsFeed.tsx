@@ -474,8 +474,8 @@ export default function NewsFeed() {
       {/* Movies view */}
       {activeCategory === "Movies" && <MoviesPanel />}
 
-      {/* Sort / Feed — hidden when scores view is open or weather is active */}
-      {!(activeCategory === "Sports" && showScoresView) && activeCategory !== "Weather" && (
+      {/* Sort / Feed — hidden when scores view is open, weather, or movies active */}
+      {!(activeCategory === "Sports" && showScoresView) && activeCategory !== "Weather" && activeCategory !== "Movies" && (
         <>
           {/* Sort + Refresh controls */}
           <div className="flex items-center gap-3 mb-4">

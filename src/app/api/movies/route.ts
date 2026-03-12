@@ -28,6 +28,7 @@ export async function GET() {
       .split("T")[0];
 
     // Use discover/movie with date range — covers full year ahead
+    // with_original_language=en filters to English-language films only
     // Fetch up to 5 pages (100 movies)
     const pages = await Promise.all(
       [1, 2, 3, 4, 5].map((page) =>
@@ -36,8 +37,8 @@ export async function GET() {
           `&sort_by=primary_release_date.asc` +
           `&primary_release_date.gte=${today}` +
           `&primary_release_date.lte=${maxDate}` +
-          `&with_release_type=2|3` +
-          `&language=en-US&region=GB&page=${page}`
+          `&with_original_language=en` +
+          `&language=en-US&page=${page}`
         ).then((r) => r.json())
       )
     );
