@@ -194,7 +194,7 @@ export default function MoviesPanel() {
   return (
     <div className="pb-4">
       {/* Sticky search bar */}
-      <div className="sticky top-2 z-20 bg-vn-bg py-2 -mx-4 px-4">
+      <div className="sticky top-0 z-20 bg-vn-bg py-2 -mx-4 px-4">
         <div className="relative">
           <input
             type="text"
