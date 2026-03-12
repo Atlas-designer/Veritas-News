@@ -7,6 +7,7 @@ export interface MovieDetail {
   posterPath: string;
   overview: string;
   runtime: number;
+  imdbId: string;
   cast: { name: string; character: string }[];
   directors: string[];
   productionCompanies: string[];
@@ -49,6 +50,7 @@ export async function GET(
       posterPath: data.poster_path ?? "",
       overview: data.overview ?? "",
       runtime: data.runtime ?? 0,
+      imdbId: data.imdb_id ?? "",
       cast: (data.credits?.cast ?? [])
         .slice(0, 8)
         .map((c: { name: string; character: string }) => ({

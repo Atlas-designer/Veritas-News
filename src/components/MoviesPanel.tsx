@@ -77,14 +77,27 @@ function MovieDetailModal({ movieId, onClose }: { movieId: number; onClose: () =
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-32">
                 {detail.posterPath ? (
-                  <Image
-                    src={`${POSTER_BASE_LG}${detail.posterPath}`}
-                    alt={detail.title}
-                    width={128}
-                    height={192}
-                    className="rounded-sm object-cover w-full"
-                    unoptimized
-                  />
+                  <a
+                    href={detail.imdbId ? `https://www.imdb.com/title/${detail.imdbId}/` : undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={detail.imdbId ? "block group/imdb" : "block pointer-events-none"}
+                    title={detail.imdbId ? "View on IMDb" : undefined}
+                  >
+                    <Image
+                      src={`${POSTER_BASE_LG}${detail.posterPath}`}
+                      alt={detail.title}
+                      width={128}
+                      height={192}
+                      className="rounded-sm object-cover w-full group-hover/imdb:opacity-75 transition-opacity"
+                      unoptimized
+                    />
+                    {detail.imdbId && (
+                      <div className="mt-1 text-center data-readout text-[8px] text-vn-text-dim group-hover/imdb:text-vn-cyan transition-colors">
+                        VIEW ON IMDb ↗
+                      </div>
+                    )}
+                  </a>
                 ) : (
                   <div className="w-full aspect-[2/3] bg-vn-bg rounded-sm flex items-center justify-center text-3xl">
                     🎬
