@@ -264,7 +264,7 @@ export default function MoviesPanel() {
                     🎬
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 to-transparent px-2 py-2">
+                <div className="absolute bottom-0 left-0 right-0 bg-[#111111dd] px-2 py-1.5 border-t border-white/10">
                   <p className="data-readout text-[8px] text-vn-cyan leading-tight">
                     {formatDate(movie.releaseDate)}
                   </p>
