@@ -9,24 +9,28 @@ interface TrustMeterProps {
 }
 
 function getColor(s: number) {
+  const isLight =
+    typeof window !== "undefined" &&
+    document.documentElement.dataset.theme === "light";
+
   if (s >= 85)
     return {
-      stroke: "#00ff88",
-      glow: "drop-shadow(0 0 4px rgba(0,255,136,0.5))",
+      stroke: isLight ? "#007a3d" : "#00ff88",
+      glow: isLight ? "none" : "drop-shadow(0 0 4px rgba(0,255,136,0.5))",
     };
   if (s >= 60)
     return {
-      stroke: "#00e5ff",
-      glow: "drop-shadow(0 0 4px rgba(0,229,255,0.5))",
+      stroke: isLight ? "#0077aa" : "#00e5ff",
+      glow: isLight ? "none" : "drop-shadow(0 0 4px rgba(0,229,255,0.5))",
     };
   if (s >= 30)
     return {
-      stroke: "#ff8c00",
-      glow: "drop-shadow(0 0 4px rgba(255,140,0,0.5))",
+      stroke: isLight ? "#c05c00" : "#ff8c00",
+      glow: isLight ? "none" : "drop-shadow(0 0 4px rgba(255,140,0,0.5))",
     };
   return {
-    stroke: "#ff2d2d",
-    glow: "drop-shadow(0 0 4px rgba(255,45,45,0.5))",
+    stroke: isLight ? "#b91c1c" : "#ff2d2d",
+    glow: isLight ? "none" : "drop-shadow(0 0 4px rgba(255,45,45,0.5))",
   };
 }
 
@@ -94,7 +98,12 @@ export default function TrustMeter({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#1a2332"
+          stroke={
+            typeof window !== "undefined" &&
+            document.documentElement.dataset.theme === "light"
+              ? "#c8d4dc"
+              : "#1a2332"
+          }
           strokeWidth="3"
         />
         {/* Animated score arc */}

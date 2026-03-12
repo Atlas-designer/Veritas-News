@@ -42,6 +42,18 @@
 /* Input backgrounds */
 [data-theme="light"] input[class*="bg-vn-panel"] { background-color: #e8e5e0 !important; }
 
+/* Category bar — bg-black/30 is too dark on light bg */
+[data-theme="light"] .bg-black\/30 { background-color: rgba(0,0,0,0.06) !important; }
+
+/* Bias badge text — darken pastel colours for light bg contrast */
+[data-theme="light"] .text-sky-400   { color: #0369a1 !important; }
+[data-theme="light"] .text-blue-400  { color: #1d4ed8 !important; }
+[data-theme="light"] .text-amber-400 { color: #92400e !important; }
+[data-theme="light"] .text-red-400   { color: #991b1b !important; }
+
+/* LIVE ticker — make red more saturated/dark */
+[data-theme="light"] { --vn-red: #c0392b; }
+
 /* Scrollbar */
 [data-theme="light"] ::-webkit-scrollbar-track { background: #f5f2ee; }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background: #ccc9c0; }
